@@ -1,22 +1,79 @@
 main:
 
-  - title: Continual Learning for Abdominal Multi-Organ and Tumor Segmentation
-    authors: Yixiao Zhang, Xinyi Li, Huimiao Chen, Alan Yuille, <strong>Yaoyao Liu*</strong>, Zongwei Zhou* (*Corresponding authors)
-    conference_short: MICCAI
-    conference: International Conference on Medical Image Computing and Computer-Assisted Intervention <strong>(MICCAI)</strong>, 2023.
-    pdf: https://arxiv.org/pdf/2306.00988.pdf
-    code: https://github.com/MrGiovanni/ContinualLearning
-    bibtex: https://bib.yliu.me/MICCAI23.txt
-    image: ./assets/img/teaser_example_2.png
-    notes: Early Accept
+  - title: "ECG-Reasoning-Benchmark: A Benchmark for Evaluating Clinical Reasoning Capabilities in ECG Interpretation"
+    authors: <strong>Jungwoo Oh</strong>, Hyunseung Chung, Min-Gyu Kim, Hangyul Yoon, Ki Seong Lee, Youngchae Lee, Muhan Yeo, Edward Choi
+    conference_short: NeurIPS
+    conference: Conference on Neural Information Processing Systems <strong>(NeurIPS)</strong>, Evaluations and Datasets Track, 2026.
+    pdf: https://arxiv.org/pdf/2603.14326
+    code: https://github.com/Jwoo5/ecg-reasoning-benchmark
 
-  - title: "Mnemonics Training: Multi-Class Incremental Learning without Forgetting"
-    authors: <strong>Yaoyao Liu</strong>, Yuting Su, An-An Liu, Bernt Schiele, Qianru Sun
-    conference_short: CVPR
-    conference: IEEE/CVF Conference on Computer Vision and Pattern Recognition <strong>(CVPR)</strong>, 2020.
-    pdf: https://arxiv.org/pdf/2002.10211.pdf
-    code: https://github.com/yaoyao-liu/class-incremental-learning/tree/main/mnemonics-training
-    page: https://class-il.mpi-inf.mpg.de/mnemonics/
-    bibtex: https://class-il.mpi-inf.mpg.de/mnemonics/
-    notes: Oral Presentation
-    image: ./assets/img/teaser_example.png
+  - title: "MEDS — An Emerging Data Standard and Ecosystem for Health AI Research"
+    authors: Matthew BA McDermott, Ethan Steinberg, Jason A Fries, Robin P van de Water, Chao Pang, Patrick Rockenschaub, Pawel Renc, <strong>Jungwoo Oh</strong>, Kamilė Stankevičiūtė, Justin Xu, Tom J Pollard, Nassim Oufattole, Michael Wornow, Teya S Bergamaschi, Hyewon Jeong, Simon A Lee, Vincent Jeanselme, Kiril V Klein, Mikkel Odgaard, Maria E Montgomery, Arkadiusz Sitek, Mads Nielsen, Jeffrey N Chiang, Noa Dagan, Isaac Kohane, Shalmali Joshi, Edward Choi, Nigam H Shah
+    conference_short: NEJM AI
+    conference: <strong>NEJM AI</strong>, 2026.
+    pdf: https://doi.org/10.1056/AIra2501253
+
+  - title: "ECG-Agent: On-Device Tool-Calling Agent for ECG Multi-Turn Dialogue"
+    authors: Hyunseung Chung, <strong>Jungwoo Oh</strong>, Daeun Kyung, Jiho Kim, Yeonsu Kwon, Min-Gyu Kim, Edward Choi
+    conference_short: ICASSP
+    conference: IEEE International Conference on Acoustics, Speech, and Signal Processing <strong>(ICASSP)</strong>, 2026.
+    pdf: https://arxiv.org/pdf/2601.20323
+
+  - title: "LabTOP: A Unified Model for Lab Test Outcome Prediction on Electronic Health Records"
+    authors: Sujeong Im*, <strong>Jungwoo Oh*</strong>, Edward Choi (*Equal contribution)
+    conference_short: CHIL
+    conference: Conference on Health, Inference, and Learning <strong>(CHIL)</strong>, 2025.
+    pdf: https://arxiv.org/pdf/2502.14259
+    notes: Best Paper Award
+
+  - title: "Learning Under Label Noise Through Few-shot Human-in-the-loop Refinement"
+    authors: Aaqib Saeed, Dimitris Spathis, <strong>Jungwoo Oh</strong>, Edward Choi, Ali Etemad
+    conference_short: Sci. Rep.
+    conference: <strong>Scientific Reports</strong>, 2025.
+    pdf: https://arxiv.org/pdf/2401.14107
+
+  - title: "Publicly Shareable Clinical Large Language Model Built on Synthetic Clinical Notes"
+    authors: Sunjun Kweon*, Junu Kim*, Jiyoun Kim, Sujeong Im, Eunbyeol Cho, Seongsu Bae, <strong>Jungwoo Oh</strong>, Gyubok Lee, Jong Hak Moon, Seng Chan You, Seungjin Baek, Chang Hoon Han, Yoon Bin Jung, Yohan Jo, Edward Choi (*Equal contribution)
+    conference_short: ACL Findings
+    conference: "Findings of the Association for Computational Linguistics <strong>(ACL)</strong>, 2024."
+    pdf: https://arxiv.org/pdf/2309.00237
+    code: https://github.com/starmpcc/Asclepius
+
+  - title: "GenHPF: General Healthcare Predictive Framework for Multi-task Multi-source Learning"
+    authors: Kyunghoon Hur, <strong>Jungwoo Oh</strong>, Junu Kim, Min Jae Lee, Eunbyeol Cho, Jiyoun Kim, Seong-Eun Moon, Young-Hak Kim, Louis Atallah, Edward Choi
+    conference_short: JBHI
+    conference: IEEE Journal of Biomedical and Health Informatics <strong>(JBHI)</strong>, 2024.
+    pdf: https://arxiv.org/pdf/2207.09858
+
+  - title: "EHRXQA: A Multi-Modal Question Answering Dataset for Electronic Health Records with Chest X-ray Images"
+    authors: Seongsu Bae*, Daeun Kyung*, Jaehee Ryu, Eunbyeol Cho, Gyubok Lee, Sunjun Kweon, <strong>Jungwoo Oh</strong>, Lei Ji, Eric I-Chao Chang, Tackeun Kim, Edward Choi (*Equal contribution)
+    conference_short: NeurIPS
+    conference: Conference on Neural Information Processing Systems <strong>(NeurIPS)</strong>, Datasets and Benchmarks Track, 2023.
+    pdf: https://arxiv.org/pdf/2310.18652
+    code: https://github.com/baeseongsu/ehrxqa
+
+  - title: "ECG-QA: A Comprehensive Question Answering Dataset Combined With Electrocardiogram"
+    authors: <strong>Jungwoo Oh</strong>, Seongsu Bae, Gyubok Lee, Joon-myoung Kwon, Edward Choi
+    conference_short: NeurIPS
+    conference: Conference on Neural Information Processing Systems <strong>(NeurIPS)</strong>, Datasets and Benchmarks Track, 2023.
+    pdf: https://arxiv.org/pdf/2306.15681
+    code: https://github.com/Jwoo5/ecg-qa
+
+  - title: "Lead-agnostic Self-supervised Learning for Local and Global Representations of Electrocardiogram"
+    authors: <strong>Jungwoo Oh</strong>, Hyunseung Chung, Joon-myoung Kwon, Dong-gyun Hong, Edward Choi
+    conference_short: CHIL
+    conference: Conference on Health, Inference, and Learning <strong>(CHIL)</strong>, 2022.
+    pdf: https://arxiv.org/pdf/2203.06889
+    code: https://github.com/Jwoo5/fairseq-signals
+
+  - title: "Unifying Heterogeneous Electronic Health Records Systems via Text-Based Code Embedding"
+    authors: Kyunghoon Hur*, Jiyoung Lee*, <strong>Jungwoo Oh</strong>, Wesley Price, Young-Hak Kim, Edward Choi (*Equal contribution)
+    conference_short: CHIL
+    conference: Conference on Health, Inference, and Learning <strong>(CHIL)</strong>, 2022.
+    pdf: https://arxiv.org/pdf/2108.03625
+
+  - title: "Gradually Applying Weakly Supervised and Active Learning for Mass Detection in Breast Ultrasound Images"
+    authors: Jooyeol Yun, <strong>Jungwoo Oh</strong>, Ildong Yun
+    conference_short: Appl. Sci.
+    conference: <strong>Applied Sciences</strong>, 2020.
+    pdf: https://arxiv.org/pdf/2008.08416
