@@ -28,4 +28,9 @@ Building on my experience in constructing ECG datasets, I am currently working o
 
 {% include_relative _includes/publications.md %}
 
+## Education
+
+- **Ph.D. in Artificial Intelligence**, KAIST, Mar. 2021 – Feb. 2026<br>Advised by [Prof. Edward Choi](https://mp2893.com)
+- **B.S. in Computer Science and Engineering**, Korea University, Mar. 2017 – Feb. 2021
+
 {% include_relative _includes/services.md %}
