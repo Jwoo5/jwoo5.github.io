@@ -26,6 +26,10 @@ Building on my experience in constructing ECG datasets, I am currently working o
 - **[Sept. 2023]** Our paper, [ECG-QA](https://arxiv.org/abs/2306.15681), was accepted to the NeurIPS 2023 Datasets and Benchmarks Track.
 - **[Mar. 2022]** Our paper, [Lead-agnostic Self-supervised Learning for ECG](https://arxiv.org/abs/2203.06889), was accepted to CHIL 2022.
 
+## Projects
+
+- **[ECG Reasoning Agent](./ecg-reasoning-agent/):** a conversational agent that answers questions about a 12-lead ECG and, when asked, highlights on the tracing the waves and intervals behind its answer. A live research demo is open to try.
+
 {% include_relative _includes/publications.md %}
 
 ## Education

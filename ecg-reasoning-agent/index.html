@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>ECG Reasoning Agent</title>
+  <meta name="description" content="A conversational agent that answers questions about a 12-lead ECG and, when asked, highlights on the tracing the waves and intervals behind its answer. Live research demo.">
+  <link rel="canonical" href="https://jwoo5.github.io/ecg-reasoning-agent/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="ECG Reasoning Agent">
+  <meta property="og:description" content="Ask questions about a 12-lead ECG and have it show the evidence on the tracing. Live research demo.">
+  <meta property="og:url" content="https://jwoo5.github.io/ecg-reasoning-agent/">
+  <link rel="icon" media="(prefers-color-scheme:dark)" href="../assets/img/favicon-dark.png" type="image/png">
+  <link rel="icon" media="(prefers-color-scheme:light)" href="../assets/img/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,500&display=swap">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #4a4a4a;
+      --heading: #043361;
+      --muted: #6b6b6b;
+      --link: #0b62a4;
+      --card: #f6f7f9;
+      --border: #e3e6ea;
+      --primary-bg: #043361;
+      --primary-text: #ffffff;
+      --notice-bg: #fff8e6;
+      --notice-border: #e0a526;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #20212b;
+        --text: #dadbdf;
+        --heading: #eeeff0;
+        --muted: #a9abb3;
+        --link: #3eb7f0;
+        --card: #292a36;
+        --border: #3a3c4a;
+        --primary-bg: #3eb7f0;
+        --primary-text: #10131a;
+        --notice-bg: #33301f;
+        --notice-border: #c9952a;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 18px/1.6 "Crimson Pro", Georgia, serif;
+    }
+    main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 48px 20px 64px;
+    }
+    a {
+      color: var(--link);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.15em;
+    }
+    a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+    a:not(.button):focus-visible { border-radius: 4px; }
+    code { color: inherit; font-size: 0.9em; }
+
+    header { text-align: center; margin-bottom: 36px; }
+    h1 {
+      margin: 0 0 8px;
+      color: var(--heading);
+      font-size: 2.6rem;
+      font-weight: 600;
+      line-height: 1.15;
+    }
+    .lead { margin: 0 auto 6px; max-width: 640px; font-size: 1.2rem; }
+    .byline { margin: 0 0 24px; color: var(--muted); }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .button {
+      display: inline-block;
+      padding: 9px 20px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--heading);
+      background: var(--card);
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .button:hover { border-color: var(--link); }
+    .button.primary {
+      background: var(--primary-bg);
+      border-color: var(--primary-bg);
+      color: var(--primary-text);
+      font-weight: 600;
+    }
+    .button.primary:hover { filter: brightness(1.1); }
+    .hint { margin: 0 auto 8px; max-width: 600px; color: var(--muted); font-size: 0.95rem; }
+
+    h2 {
+      margin: 44px 0 14px;
+      color: var(--heading);
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+    p { margin: 0 0 14px; }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .features li {
+      padding: 16px 18px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .features strong { display: block; margin-bottom: 4px; color: var(--heading); font-weight: 600; }
+
+    .plain { margin: 0; padding-left: 1.2em; }
+    .plain li { margin-bottom: 4px; }
+    .plain q { font-style: italic; }
+
+    .notice {
+      margin: 0;
+      padding: 16px 20px 16px 22px;
+      background: var(--notice-bg);
+      border-left: 4px solid var(--notice-border);
+      border-radius: 6px;
+    }
+    .notice ul { margin: 0; padding-left: 1.1em; }
+    .notice li { margin-bottom: 8px; }
+    .notice li:last-child { margin-bottom: 0; }
+
+    footer {
+      margin-top: 52px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    footer p { margin: 0 0 6px; }
+
+    @media (max-width: 600px) {
+      body { font-size: 17px; }
+      main { padding: 32px 16px 48px; }
+      h1 { font-size: 2.1rem; }
+      .lead { font-size: 1.1rem; }
+      .features { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>ECG Reasoning Agent</h1>
+      <p class="lead">Ask questions about a 12-lead ECG in plain language. Ask it to show its evidence, and it highlights on the tracing the waves and intervals behind its answer.</p>
+      <p class="byline"><a href="https://jwoo5.github.io/">Jungwoo Oh</a> &middot; KAIST AI</p>
+      <div class="actions">
+        <a class="button primary" href="https://amiyah-valueless-ione.ngrok-free.dev/">Try the live demo</a>
+        <a class="button" href="#before">Before you try it</a>
+      </div>
+      <p class="hint">A research demo, not for clinical use. Do not enter anything that identifies a patient.</p>
+      <p class="hint">No sign-up needed. On your first visit, a notice page from ngrok, the service that serves the link, asks you to confirm. It appears for every site served this way and does not mean anything is wrong: select <strong>Visit Site</strong>. If the demo does not open on a hospital network, try another network.</p>
+    </header>
+
+    <!-- To do: an autoplaying clip of a question and its answer goes here, and a diagram of the
+         agent's steps goes in "How it works" (after the Open WebUI screens are polished). -->
+
+    <p>This is a research prototype. We are studying whether an assistant can explain an ECG reading and show the evidence for it, so that a clinician can check the answer rather than take it on trust. We would especially like clinicians to try it and tell us where it is wrong, unclear or unhelpful (contact at the bottom of this page).</p>
+
+    <section aria-labelledby="what">
+      <h2 id="what">What you can do</h2>
+      <ul class="features">
+        <li><strong>Ask in plain language</strong> Ask about rhythm, rate, intervals, axis, conduction, or signs of ischemia or infarction, or whether a diagnosis you suspect fits, and follow up in the same chat.</li>
+        <li><strong>See the evidence</strong> Ask it to show where a finding is, and it highlights the waves, peaks and intervals it measured on the 12-lead tracing. A finding with no single position, such as the QRS axis, is explained in words instead.</li>
+        <li><strong>Bring an ECG</strong> Pick one of 6,188 ECGs from two public research datasets, PTB-XL and MIMIC-IV-ECG (listed by ECG id, without their diagnoses). Or upload your own 12-lead recording in WFDB format, the PhysioNet format made of a <code>.hea</code> header file and a <code>.dat</code> signal file; you will be asked to confirm its sampling rate and lead order. Photos, PDFs, scanned paper ECGs, ECG-cart exports and single-lead recordings cannot be read.</li>
+        <li><strong>Paced rhythms</strong> If you know the patient has a pacemaker, turn on <em>Pacemaker detection</em> when you attach the ECG. The analysis then looks for pacing spikes and, where it finds them, does not report diagnoses that cannot be read from paced beats, such as infarction or ischemia. It is off by default because it can mistake other sharp deflections for pacing spikes.</li>
+      </ul>
+      <p style="margin-top:14px">Answers take several seconds or more, since the agent works through a few steps before replying. The 12-lead tracing is easier to read on a larger screen, and uploading your own recording is easier from a computer.</p>
+    </section>
+
+    <section aria-labelledby="try">
+      <h2 id="try">Things to try</h2>
+      <ul class="plain">
+        <li><q>What is the rhythm, and what is the heart rate?</q></li>
+        <li><q>Is the QT interval prolonged? Show me where you measured it.</q></li>
+        <li><q>Are there signs of an old inferior myocardial infarction?</q></li>
+        <li><q>Mark the P waves in lead II.</q></li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="before">
+      <h2 id="before">Before you use it</h2>
+      <div class="notice">
+        <ul>
+          <li>This is a research demo. It is not a medical device and must not be used to diagnose or treat patients. Its answers can be wrong.</li>
+          <li>Upload only recordings you are allowed to share outside your institution, and do not upload, attach or type anything that could identify a patient. A WFDB header can hold patient details in its comment lines, so check it before uploading.</li>
+          <li>To write each answer, your question, the earlier messages in the chat, the text of any document you attach, and the analysis results are sent to an external language model service. The ECG signal, its image and the highlighted tracing are not sent.</li>
+          <li>There is no account: each browser gets its own guest session. Closing the browser usually ends it, and its chats cannot be opened again; chats left unused for a day are deleted.</li>
+          <li>Use is limited per day, and the demo may be unavailable at times.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section aria-labelledby="how">
+      <h2 id="how">How it works</h2>
+      <p>The language model does not look at the ECG signal or its image. A separate ECG analysis program measures the recording (wave boundaries, intervals, amplitudes, axis) and reports findings and diagnostic statements. For each question, the agent decides whether the question needs the recording at all (a general question such as <q>What is a normal PR interval?</q> does not), chooses which of the analysis results bear on it, and writes the answer from them.</p>
+      <p>The answers are only as good as these measurements: on a noisy or unusual recording, a misplaced wave boundary leads to a wrong answer. When you ask to see something, the agent picks the measured wave boundaries or peaks that locate it, and the demo highlights them on the 12-lead tracing, so you can check the answer against the ECG.</p>
+    </section>
+
+    <section aria-labelledby="data">
+      <h2 id="data">Data</h2>
+      <p>The sample ECGs come from <a href="https://physionet.org/content/ptb-xl/1.0.3/">PTB-XL</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>) and <a href="https://physionet.org/content/mimic-iv-ecg/1.0/">MIMIC-IV-ECG</a> (<a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a>), both published on PhysioNet. They are the ECGs used in the ECG-Reasoning-Benchmark.</p>
+    </section>
+
+    <section aria-labelledby="related">
+      <h2 id="related">Related work</h2>
+      <ul class="plain">
+        <li><a href="https://arxiv.org/abs/2603.14326">ECG-Reasoning-Benchmark</a>, NeurIPS 2026 Evaluations and Datasets Track: the benchmark the sample ECGs come from</li>
+        <li><a href="https://arxiv.org/abs/2306.15681">ECG-QA</a>, NeurIPS 2023 Datasets and Benchmarks Track</li>
+      </ul>
+    </section>
+
+    <footer>
+      <p>Questions and feedback: ojw0123 (at) kaist.ac.kr</p>
+    </footer>
+  </main>
+</body>
+</html>
