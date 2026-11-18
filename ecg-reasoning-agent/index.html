@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>ECG Reasoning Agent</title>
-  <meta name="description" content="A conversational agent that answers questions about a 12-lead ECG and, when asked, highlights on the tracing the waves and intervals behind its answer. Live research demo.">
+  <meta name="description" content="An agent that answers questions about a 12-lead ECG and, when asked, marks the waves and intervals behind its answer on the tracing. Live research demo.">
   <link rel="canonical" href="https://jwoo5.github.io/ecg-reasoning-agent/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="ECG Reasoning Agent">
-  <meta property="og:description" content="Ask questions about a 12-lead ECG and have it show the evidence on the tracing. Live research demo.">
+  <meta property="og:description" content="Ask an agent questions about a 12-lead ECG and have it mark its evidence on the tracing. Live research demo.">
   <meta property="og:url" content="https://jwoo5.github.io/ecg-reasoning-agent/">
   <link rel="icon" media="(prefers-color-scheme:dark)" href="../assets/img/favicon-dark.png" type="image/png">
   <link rel="icon" media="(prefers-color-scheme:light)" href="../assets/img/favicon.png" type="image/png">
@@ -25,10 +25,21 @@
       --link: #0b62a4;
       --card: #f6f7f9;
       --border: #e3e6ea;
+      --line: #7d8899;
       --primary-bg: #043361;
       --primary-text: #ffffff;
       --notice-bg: #fff8e6;
       --notice-border: #e0a526;
+      --paper: #fffdfd;
+      --grid-minor: #f9e4e4;
+      --grid-major: #f0c6c6;
+      --trace: #2b2f3a;
+      --mark-fill: rgba(224, 165, 38, 0.22);
+      --mark-line: #c98d14;
+      --chosen: rgba(4, 51, 97, 0.07);
+      --evidence: #b07a0e;
+      --overlay-bg: rgba(16, 19, 26, 0.6);
+      --overlay-fg: #ffffff;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -39,23 +50,34 @@
         --link: #3eb7f0;
         --card: #292a36;
         --border: #3a3c4a;
+        --line: #6d7385;
         --primary-bg: #3eb7f0;
         --primary-text: #10131a;
         --notice-bg: #33301f;
         --notice-border: #c9952a;
+        --paper: #24252f;
+        --grid-minor: rgba(255, 128, 128, 0.07);
+        --grid-major: rgba(255, 128, 128, 0.16);
+        --trace: #e4e5e9;
+        --mark-fill: rgba(240, 185, 70, 0.2);
+        --mark-line: #e9b44c;
+        --chosen: rgba(238, 239, 240, 0.1);
+        --evidence: #e9b44c;
       }
     }
 
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     html { -webkit-text-size-adjust: 100%; }
     body {
+      container-type: inline-size;
       margin: 0;
       background: var(--bg);
       color: var(--text);
       font: 18px/1.6 "Crimson Pro", Georgia, serif;
     }
     main {
-      max-width: 780px;
+      max-width: 820px;
       margin: 0 auto;
       padding: 48px 20px 64px;
     }
@@ -65,11 +87,20 @@
       text-decoration-thickness: 1px;
       text-underline-offset: 0.15em;
     }
-    a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
-    a:not(.button):focus-visible { border-radius: 4px; }
+    a:focus-visible, button:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+    :focus:not(:focus-visible) { outline: none; }
     code { color: inherit; font-size: 0.9em; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
 
-    header { text-align: center; margin-bottom: 36px; }
+    /* Header and the section buttons */
+    header { text-align: center; }
     h1 {
       margin: 0 0 8px;
       color: var(--heading);
@@ -79,64 +110,64 @@
     }
     .lead { margin: 0 auto 6px; max-width: 640px; font-size: 1.2rem; }
     .byline { margin: 0 0 24px; color: var(--muted); }
+    .hint { margin: 0 auto; max-width: 600px; color: var(--muted); font-size: 0.95rem; }
 
-    .actions {
+    .tabs {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 10px;
-      margin-bottom: 14px;
+      margin: 0 0 14px;
     }
-    .button {
-      display: inline-block;
-      padding: 9px 20px;
+    .tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
       border: 1px solid var(--border);
       border-radius: 999px;
-      color: var(--heading);
       background: var(--card);
+      color: var(--heading);
       font-weight: 500;
       text-decoration: none;
     }
-    .button:hover { border-color: var(--link); }
-    .button.primary {
+    .tab:hover { border-color: var(--link); }
+    .tab[aria-current] {
+      border-color: var(--heading);
+      box-shadow: inset 0 0 0 1px var(--heading);
+      font-weight: 600;
+    }
+    .tab.demo {
       background: var(--primary-bg);
       border-color: var(--primary-bg);
       color: var(--primary-text);
       font-weight: 600;
     }
-    .button.primary:hover { filter: brightness(1.1); }
-    .hint { margin: 0 auto 8px; max-width: 600px; color: var(--muted); font-size: 0.95rem; }
+    .tab.demo:hover { filter: brightness(1.1); }
+    .tab.demo svg { width: 0.85em; height: 0.85em; }
 
+    /* Sections */
+    .panel { padding-top: 12px; }
     h2 {
-      margin: 44px 0 14px;
+      margin: 30px 0 14px;
       color: var(--heading);
       font-size: 1.6rem;
       font-weight: 600;
     }
+    h3 {
+      margin: 30px 0 8px;
+      color: var(--heading);
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
     p { margin: 0 0 14px; }
-
-    .features {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-    .features li {
-      padding: 16px 18px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-    }
-    .features strong { display: block; margin-bottom: 4px; color: var(--heading); font-weight: 600; }
-
+    .panel p, .panel > ul, .panel > ol, .prose { max-width: 36em; }
     .plain { margin: 0; padding-left: 1.2em; }
-    .plain li { margin-bottom: 4px; }
-    .plain q { font-style: italic; }
+    .plain li { margin-bottom: 6px; }
+    .steps q { font-style: italic; }
 
     .notice {
-      margin: 0;
+      margin: 0 0 8px;
       padding: 16px 20px 16px 22px;
       background: var(--notice-bg);
       border-left: 4px solid var(--notice-border);
@@ -145,6 +176,226 @@
     .notice ul { margin: 0; padding-left: 1.1em; }
     .notice li { margin-bottom: 8px; }
     .notice li:last-child { margin-bottom: 0; }
+
+    /* Home: the feature clips, shown on ECG paper */
+    .player { margin: 22px 0 6px; }
+    .stage {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(var(--grid-major) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+        linear-gradient(var(--grid-minor) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+      background-size: 40px 40px, 40px 40px, 8px 8px, 8px 8px;
+      background-position: -1px -1px;
+    }
+    .stage video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: var(--card);
+    }
+    .placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 6px;
+      padding: 24px;
+      text-align: center;
+    }
+    .placeholder svg { width: min(100%, 560px); height: auto; margin-bottom: 8px; }
+    .trace { fill: none; stroke: var(--trace); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .mark { fill: var(--mark-fill); stroke: var(--mark-line); stroke-width: 1.5; }
+    .placeholder-title { margin: 0; color: var(--heading); font-size: 1.35rem; font-weight: 600; }
+    .placeholder-note { margin: 0; color: var(--text); font-size: 0.95rem; }
+
+    .player-bar { margin-top: 14px; }
+    .clips {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+      gap: 10px 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .clip {
+      display: block;
+      width: 100%;
+      padding: 0 0 2px;
+      border: 0;
+      background: none;
+      color: var(--muted);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .clip:hover { color: var(--heading); }
+    .clip:disabled { color: var(--heading); cursor: default; }
+    .clip[aria-current="true"] { color: var(--heading); font-weight: 600; }
+    .clip-bar {
+      display: block;
+      height: 3px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      border-radius: 2px;
+      background: var(--border);
+    }
+    .clip-bar span {
+      display: block;
+      height: 100%;
+      background: var(--heading);
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+    .clip-title { display: block; line-height: 1.25; }
+    .clip-text { margin: 4px 0 0; font-size: 0.95rem; }
+    .clip-text q { font-style: italic; }
+    .clip-detail { display: grid; margin: 14px 0 0; }
+    .clip-detail .clip-text {
+      grid-area: 1 / 1;
+      margin: 0;
+      font-size: 1rem;
+      visibility: hidden;
+    }
+    .clip-detail .clip-text.active { visibility: visible; }
+    html:not(.js) .clip-bar,
+    html:not(.js) .clip-detail { display: none; }
+
+    /* A screen that pauses and plays when clicked, with a badge in its corner:
+       shown while paused, and on hover or focus while playing. */
+    .overlay-toggle {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      width: 100%;
+      padding: 12px;
+      border: 0;
+      background: none;
+      cursor: pointer;
+    }
+    .overlay-toggle:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
+    .toggle-icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--overlay-bg);
+      color: var(--overlay-fg);
+      opacity: 0;
+    }
+    .toggle-icon svg { width: 18px; height: 18px; fill: currentColor; }
+    .overlay-toggle[data-state="paused"] .toggle-icon,
+    .overlay-toggle:hover .toggle-icon,
+    .overlay-toggle:focus-visible .toggle-icon { opacity: 1; }
+    .overlay-toggle[data-state="paused"] .icon-pause,
+    .overlay-toggle[data-state="playing"] .icon-play { display: none; }
+
+    /* How it works: the figure of one question, drawn as inline SVG */
+    .hw { margin: 26px 0 24px; }
+    .hw-scroll { overflow-x: auto; }
+    .hw-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+    .hw-stage { position: relative; min-width: 960px; }
+    .hw-fig { display: block; width: 100%; height: auto; }
+    .hw-swipe { display: none; margin: 10px 0 0; color: var(--muted); font-size: 0.95rem; }
+    @media (min-width: 860px) {
+      .hw {
+        width: min(1160px, calc(100vw - 32px));
+        margin-left: calc(50% - min(580px, 50vw - 16px));
+        width: min(1160px, calc(100cqw - 32px));
+        margin-left: calc(50% - min(580px, 50cqw - 16px));
+      }
+    }
+    @media (max-width: 991.98px) { .hw-swipe { display: block; } }
+    @container (width < 992px) { .hw-swipe { display: block; } }
+    .hw-fig text { font-family: "Crimson Pro", "Times New Roman", Times, "Liberation Serif", Tinos, serif; }
+    .hw-paper { fill: var(--paper); }
+    .hw-grid-minor { fill: none; stroke: var(--grid-minor); stroke-width: 1; }
+    .hw-grid-major { fill: none; stroke: var(--grid-major); stroke-width: 1; }
+    .hw-box { fill: var(--bg); stroke: var(--heading); --sw: 1.25px; stroke-width: var(--sw); }
+    .hw-badge { fill: var(--heading); }
+    .hw-bubble { fill: var(--card); stroke: var(--border); --sw: 1px; stroke-width: var(--sw); }
+    .hw-card { fill: none; stroke: var(--line); stroke-width: 1.25; }
+    .hw-conn { fill: none; stroke: var(--line); --sw: 1.5px; stroke-width: var(--sw); }
+    .hw-dash { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .hw-head { fill: var(--line); }
+    .hw-read { fill: none; stroke: var(--heading); stroke-width: 2; }
+    .hw-pick { fill: none; stroke: var(--heading); stroke-width: 1.5; stroke-dasharray: 4 3; }
+    .hw-pick-seg { fill: none; stroke: var(--heading); stroke-width: 1.5; }
+    .hw-read-head { fill: var(--heading); }
+    .hw-ev { fill: none; stroke: var(--evidence); stroke-width: 2; }
+    .hw-ev-head { fill: var(--evidence); }
+    .hw-mark { fill: var(--mark-fill); stroke: var(--evidence); stroke-width: 1.5; }
+    .hw-trace { fill: none; stroke: var(--trace); stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+    .hw-prog { fill: var(--card); stroke: var(--line); stroke-width: 1.25; }
+    .hw-results { fill: var(--bg); stroke: var(--border); stroke-width: 1; }
+    .hw-rule { fill: none; stroke: var(--border); stroke-width: 1; }
+    .hw-chip { fill: var(--card); stroke: var(--border); stroke-width: 1; }
+    .hw-chip-on { fill: var(--chosen); stroke: var(--heading); stroke-width: 1.25; }
+    .hw-group { fill: none; stroke: var(--heading); stroke-width: 1.25; stroke-dasharray: 4 3; }
+    .hw-edge { fill: none; stroke: var(--grid-major); stroke-width: 1.5; }
+    .hw-title { font-size: 16px; font-weight: 600; fill: var(--heading); }
+    .hw-ex { font-size: 14px; font-style: italic; fill: var(--muted); }
+    .hw-badge-t { font-size: 13px; font-weight: 600; fill: var(--bg); }
+    .hw-say { font-size: 15px; fill: var(--text); }
+    .hw-say-h { font-size: 13.5px; font-weight: 600; fill: var(--heading); }
+    .hw-label { font-size: 13.5px; font-style: italic; fill: var(--muted); }
+    .hw-prog-t { font-size: 16px; font-weight: 600; fill: var(--text); }
+    .hw-tier-t { font-size: 13.5px; font-weight: 600; fill: var(--text); }
+    .hw-tier-s { font-size: 13px; font-style: italic; fill: var(--muted); }
+    .hw-chip-t { font-size: 13px; fill: var(--text); }
+    .hw-chip-on-t { font-size: 13px; font-weight: 600; fill: var(--heading); }
+    .hw-more { font-size: 13px; font-style: italic; fill: var(--muted); }
+    .hw-cap { font-size: 13.5px; fill: var(--text); }
+    .hw-lead { font-size: 11.5px; fill: var(--muted); }
+    @media (prefers-reduced-motion: no-preference) {
+      .hw.play .hw-pulse { animation: hw-pulse 1.2s ease-out var(--d) both; }
+      .hw.play .hw-box.hw-pulse, .hw.play .hw-bubble.hw-pulse { animation: hw-pulse 1.2s ease-out var(--d) both, hw-tint 1.2s ease-out var(--d) both; }
+      .hw.play .hw-draw { stroke-dasharray: 1; animation: hw-draw 0.7s ease-in-out var(--d) both; }
+      .hw.play .hw-wake { animation: hw-wake 0.8s ease-out var(--d) both; }
+      .hw.play .hw-wake-box { animation: hw-wake 0.8s ease-out var(--d) both, hw-pulse 1.2s ease-out var(--d) both, hw-tint 1.2s ease-out var(--d) both; }
+      .hw.play .hw-pop { animation: hw-appear 0.25s ease-out var(--d) both; }
+      .hw.play .hw-appear { animation: hw-appear 0.8s ease-out var(--d) both; }
+      .hw.play .hw-pick-seg.hw-appear { animation-duration: 0.12s; }
+      .hw.play .hw-choose { animation: hw-choose 0.5s ease-out var(--d) both; }
+      .hw.play .hw-choose-t { animation: hw-choose-t 0.5s ease-out var(--d) both; }
+      .hw.play .hw-type { animation: hw-type var(--t) linear var(--d) both; }
+      .hw.play .hw-grow { transform-box: fill-box; transform-origin: 0 50%; animation: hw-grow 0.6s ease-out var(--d) both; }
+    }
+    @keyframes hw-pulse { 35% { stroke-width: calc(var(--sw) + 2.5px); } }
+    @keyframes hw-tint { 35% { fill: var(--chosen); } }
+    @keyframes hw-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+    @keyframes hw-appear { from { opacity: 0; } }
+    @keyframes hw-wake { from { opacity: 0.28; } }
+    @keyframes hw-choose { from { fill: var(--card); stroke: var(--border); stroke-width: 1px; } }
+    @keyframes hw-choose-t { from { fill: var(--text); } }
+    /* A line is written left to right; where clip-path is not supported it appears at once. */
+    @keyframes hw-type {
+      0% { opacity: 0; -webkit-clip-path: inset(-4px 100% -4px -4px); clip-path: inset(-4px 100% -4px -4px); }
+      1% { opacity: 1; }
+      100% { opacity: 1; -webkit-clip-path: inset(-4px -4px -4px -4px); clip-path: inset(-4px -4px -4px -4px); }
+    }
+    @keyframes hw-grow { from { transform: scaleX(0); } }
+    .steps { margin: 0; padding-left: 1.3em; }
+    .steps li { margin-bottom: 10px; }
+    .steps strong { color: var(--heading); font-weight: 600; }
+
+    /* Contact */
+    .contact { margin: 0; }
+    .contact dt { color: var(--heading); font-weight: 600; }
+    .contact dd { margin: 0 0 14px; }
 
     footer {
       margin-top: 52px;
@@ -160,7 +411,15 @@
       main { padding: 32px 16px 48px; }
       h1 { font-size: 2.1rem; }
       .lead { font-size: 1.1rem; }
-      .features { grid-template-columns: 1fr; }
+      .tabs { gap: 8px; }
+      .tab { padding: 7px 14px; }
+    }
+    @media (forced-colors: active) {
+      .tab[aria-current] { border-width: 2px; text-decoration: underline; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .clip-bar span { transition: transform 0.25s linear; }
+      .toggle-icon { transition: opacity 0.2s; }
     }
   </style>
 </head>
@@ -168,69 +427,604 @@
   <main>
     <header>
       <h1>ECG Reasoning Agent</h1>
-      <p class="lead">Ask questions about a 12-lead ECG in plain language. Ask it to show its evidence, and it highlights on the tracing the waves and intervals behind its answer.</p>
-      <p class="byline"><a href="https://jwoo5.github.io/">Jungwoo Oh</a> &middot; KAIST AI</p>
-      <div class="actions">
-        <a class="button primary" href="https://amiyah-valueless-ione.ngrok-free.dev/">Try the live demo</a>
-        <a class="button" href="#before">Before you try it</a>
-      </div>
-      <p class="hint">A research demo, not for clinical use. Do not enter anything that identifies a patient.</p>
-      <p class="hint">No sign-up needed. On your first visit, a notice page from ngrok, the service that serves the link, asks you to confirm. It appears for every site served this way and does not mean anything is wrong: select <strong>Visit Site</strong>. If the demo does not open on a hospital network, try another network.</p>
+      <p class="lead">Ask questions about a 12-lead ECG in plain language. Ask the agent to show its evidence, and it marks the waves and intervals behind its answer on the tracing.</p>
+      <p class="byline"><a href="https://jwoo5.github.io/">Jungwoo Oh</a>, KAIST AI</p>
+      <nav class="tabs" aria-label="Page sections">
+        <a class="tab" href="#home" data-tab="home">Home</a>
+        <a class="tab" href="#how" data-tab="how">How it works</a>
+        <a class="tab" href="#before" data-tab="before">Before you try it</a>
+        <a class="tab demo" href="https://amiyah-valueless-ione.ngrok-free.dev/" target="_blank" rel="noopener">Try the live demo<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h5v5M14 2 7.5 8.5M12 9.5V14H2V4h4.5"/></svg><span class="visually-hidden"> (opens in a new tab)</span></a>
+        <a class="tab" href="#contact" data-tab="contact">Contact</a>
+      </nav>
+      <p class="hint">A research demo, not for clinical use. Do not enter anything that could identify a patient.</p>
     </header>
 
-    <!-- To do: an autoplaying clip of a question and its answer goes here, and a diagram of the
-         agent's steps goes in "How it works" (after the Open WebUI screens are polished). -->
+    <section id="home" class="panel" aria-labelledby="home-title">
+      <h2 id="home-title" tabindex="-1">What it does</h2>
+      <p>Attach a 12-lead ECG, one of the public samples or your own recording, and ask about it in a chat. An ECG analysis program first analyzes the recording, and the agent answers from the program's measurements, findings and diagnostic statements. When you ask to see the evidence, it marks the waves and intervals its answer rests on, so you can check the answer against the tracing.</p>
+      <p>This is a research prototype. We are studying whether an assistant can explain an ECG reading and show the evidence for it, so that a clinician can check the answer rather than take it on trust. We would especially like clinicians to try it and tell us where it is wrong, unclear or unhelpful (see <a href="#contact">Contact</a>).</p>
 
-    <p>This is a research prototype. We are studying whether an assistant can explain an ECG reading and show the evidence for it, so that a clinician can check the answer rather than take it on trust. We would especially like clinicians to try it and tell us where it is wrong, unclear or unhelpful (contact at the bottom of this page).</p>
+      <div class="player" data-player>
+        <div class="stage">
+          <video muted playsinline preload="metadata" aria-describedby="clip-detail" hidden></video>
+          <div class="placeholder">
+            <svg viewBox="0 0 600 170" aria-hidden="true">
+              <rect class="mark" x="292" y="24" width="40" height="132" rx="3"/>
+              <path class="trace" d="M0 118H40Q52 104 64 118H82L88 126 98 36 108 146 114 118H140Q166 88 192 118H240Q252 104 264 118H282L288 126 298 36 308 146 314 118H340Q366 88 392 118H440Q452 104 464 118H482L488 126 498 36 508 146 514 118H540Q566 88 592 118H600"/>
+            </svg>
+            <p class="placeholder-title">Check the reasoning</p>
+            <p class="placeholder-note">Clip coming soon</p>
+          </div>
+          <button class="overlay-toggle" type="button" hidden><span class="toggle-icon" aria-hidden="true"><svg class="icon-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg><svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></span></button>
+        </div>
+        <div class="player-bar">
+          <!-- data-src and data-poster name each clip's video and still image, such as media/ask.mp4 and media/ask.jpg; a clip without data-src shows the placeholder above. -->
+          <ul class="clips">
+            <li>
+              <button class="clip" type="button" data-src="" data-poster="" aria-describedby="clip-text-0" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">Check the reasoning</span>
+              </button>
+              <p class="clip-text" id="clip-text-0">Ask whether a diagnosis fits, such as <q>Are there signs of an old inferior myocardial infarction? Why?</q> The answer names the findings and measurements it rests on, so you can follow how the agent reached it.</p>
+            </li>
+            <li>
+              <button class="clip" type="button" data-src="" data-poster="" aria-describedby="clip-text-1" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">Check the measurements</span>
+              </button>
+              <p class="clip-text" id="clip-text-1">Ask for the numbers, such as <q>What are the PR, QRS and QT intervals?</q> The answer gives the measured values, so you can compare them with your own reading of the tracing.</p>
+            </li>
+            <li>
+              <button class="clip" type="button" data-src="" data-poster="" aria-describedby="clip-text-2" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">See the evidence</span>
+              </button>
+              <p class="clip-text" id="clip-text-2">Ask to see the evidence, such as <q>Is the QT interval prolonged? Show me where you measured it.</q> Below the answer, the 12-lead tracing shows each QT interval marked where it was measured. A result with no position on the tracing, such as the QRS axis, is given in words without a mark.</p>
+            </li>
+            <li>
+              <button class="clip" type="button" data-src="" data-poster="" aria-describedby="clip-text-3" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">Know its limits</span>
+              </button>
+              <p class="clip-text" id="clip-text-3">Ask about something the agent does not analyze, such as <q>Mark the U waves.</q> The answer says that U waves cannot be marked and why, without guessing whether the recording has them.</p>
+            </li>
+            <li>
+              <button class="clip" type="button" data-src="" data-poster="" aria-describedby="clip-text-4" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">Ask a follow-up</span>
+              </button>
+              <p class="clip-text" id="clip-text-4">Ask another question in the same chat, such as <q>Is that normal?</q> after an answer. The answer builds on the conversation so far.</p>
+            </li>
+          </ul>
+        </div>
+        <div class="clip-detail" id="clip-detail"></div>
+      </div>
 
-    <section aria-labelledby="what">
-      <h2 id="what">What you can do</h2>
-      <ul class="features">
-        <li><strong>Ask in plain language</strong> Ask about rhythm, rate, intervals, axis, conduction, or signs of ischemia or infarction, or whether a diagnosis you suspect fits, and follow up in the same chat.</li>
-        <li><strong>See the evidence</strong> Ask it to show where a finding is, and it highlights the waves, peaks and intervals it measured on the 12-lead tracing. A finding with no single position, such as the QRS axis, is explained in words instead.</li>
-        <li><strong>Bring an ECG</strong> Pick one of 6,188 ECGs from two public research datasets, PTB-XL and MIMIC-IV-ECG (listed by ECG id, without their diagnoses). Or upload your own 12-lead recording in WFDB format, the PhysioNet format made of a <code>.hea</code> header file and a <code>.dat</code> signal file; you will be asked to confirm its sampling rate and lead order. Photos, PDFs, scanned paper ECGs, ECG-cart exports and single-lead recordings cannot be read.</li>
-        <li><strong>Paced rhythms</strong> If you know the patient has a pacemaker, turn on <em>Pacemaker detection</em> when you attach the ECG. The analysis then looks for pacing spikes and, where it finds them, does not report diagnoses that cannot be read from paced beats, such as infarction or ischemia. It is off by default because it can mistake other sharp deflections for pacing spikes.</li>
-      </ul>
-      <p style="margin-top:14px">Answers take several seconds or more, since the agent works through a few steps before replying. The 12-lead tracing is easier to read on a larger screen, and uploading your own recording is easier from a computer.</p>
+      <p style="margin-top:14px">Each answer takes several seconds or more, and a line above it shows which step the agent is on.</p>
     </section>
 
-    <section aria-labelledby="try">
-      <h2 id="try">Things to try</h2>
-      <ul class="plain">
-        <li><q>What is the rhythm, and what is the heart rate?</q></li>
-        <li><q>Is the QT interval prolonged? Show me where you measured it.</q></li>
-        <li><q>Are there signs of an old inferior myocardial infarction?</q></li>
-        <li><q>Mark the P waves in lead II.</q></li>
-      </ul>
+    <section id="how" class="panel" aria-labelledby="how-title">
+      <h2 id="how-title" tabindex="-1">How it works</h2>
+      <div class="hw">
+        <div class="hw-scroll" role="group" aria-label="How it works figure">
+          <div class="hw-stage">
+            <svg class="hw-fig hw-wide" viewBox="0 0 1160 584" role="img" aria-label="Diagram of how the agent answers one example question: Is the QT interval prolonged? Show me where you measured it. An ECG analysis program reports measurements, findings and diagnostic statements for the ECG. Step 1, is ECG analysis needed to answer? Yes, because the question is about this ECG. A question that does not need it is answered from the conversation, any attached document and medical knowledge, without the analysis results. Step 2, choose which results to read: QT interval, QTc, QRS onset and T offset. Step 3, decide what to mark: each QT interval, from QRS onset to T offset. Step 4, write the answer from the values and medical knowledge. The language model works from the chosen results as text and never sees the ECG itself. The answer reads: The QTc is 489 ms, which is prolonged. It comes with the ECG, on which each QT interval is marked at the positions the analysis program measured.">
+            <defs>
+            <pattern id="hw-grid-w" y="252" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path class="hw-grid-minor" d="M8.5 0V40M16.5 0V40M24.5 0V40M32.5 0V40M0 8.5H40M0 16.5H40M0 24.5H40M0 32.5H40"/>
+            <path class="hw-grid-major" d="M0.5 0V40M0 0.5H40"/>
+            </pattern>
+            </defs>
+            <rect class="hw-paper" x="0" y="252" width="1160" height="332"/>
+            <rect x="0" y="252" width="1160" height="332" fill="url(#hw-grid-w)"/>
+            <path class="hw-edge" d="M0 252L1160 252"/>
+            <path class="hw-bubble hw-pulse" style="--d:0s" d="M26 92L174 92Q188 92 188 106L188 162Q188 176 174 176L48 176L28 188L32 176L26 176Q12 176 12 162L12 106Q12 92 26 92Z"/>
+            <text class="hw-say" x="26" y="118"><tspan x="26">Is the QT interval</tspan><tspan x="26" dy="20">prolonged? Show me</tspan><tspan x="26" dy="20">where you measured it.</tspan></text>
+            <rect class="hw-box hw-wake-box" style="--d:1.2s" x="228" y="78" width="150" height="112" rx="10"/>
+            <circle class="hw-badge hw-wake" style="--d:1.2s" cx="252" cy="78" r="13"/>
+            <text class="hw-badge-t hw-wake" style="--d:1.2s" x="252" y="82.5" text-anchor="middle">1</text>
+            <text class="hw-title hw-wake" style="--d:1.2s" x="242" y="114"><tspan x="242">Is ECG analysis</tspan><tspan x="242" dy="20">needed to answer?</tspan></text>
+            <text class="hw-ex hw-wake" style="--d:1.2s" x="242" y="160"><tspan x="242">Yes: it asks</tspan><tspan x="242" dy="17">about this ECG</tspan></text>
+            <rect class="hw-box hw-wake-box" style="--d:2.6s" x="406" y="78" width="150" height="112" rx="10"/>
+            <circle class="hw-badge hw-wake" style="--d:2.6s" cx="430" cy="78" r="13"/>
+            <text class="hw-badge-t hw-wake" style="--d:2.6s" x="430" y="82.5" text-anchor="middle">2</text>
+            <text class="hw-title hw-wake" style="--d:2.6s" x="420" y="114"><tspan x="420">Choose which</tspan><tspan x="420" dy="20">results to read</tspan></text>
+            <text class="hw-ex hw-wake" style="--d:2.6s" x="420" y="160"><tspan x="420">QT, QTc and where</tspan><tspan x="420" dy="17">each QT lies</tspan></text>
+            <rect class="hw-box hw-wake-box" style="--d:6.2s" x="584" y="78" width="150" height="112" rx="10"/>
+            <circle class="hw-badge hw-wake" style="--d:6.2s" cx="608" cy="78" r="13"/>
+            <text class="hw-badge-t hw-wake" style="--d:6.2s" x="608" y="82.5" text-anchor="middle">3</text>
+            <text class="hw-title hw-wake" style="--d:6.2s" x="598" y="114"><tspan x="598">Decide what</tspan><tspan x="598" dy="20">to mark</tspan></text>
+            <text class="hw-ex hw-wake" style="--d:6.2s" x="598" y="160"><tspan x="598">Each QT interval,</tspan><tspan x="598" dy="17">QRS onset to T offset</tspan></text>
+            <rect class="hw-box hw-wake-box" style="--d:8.4s" x="762" y="78" width="150" height="112" rx="10"/>
+            <circle class="hw-badge hw-wake" style="--d:8.4s" cx="786" cy="78" r="13"/>
+            <text class="hw-badge-t hw-wake" style="--d:8.4s" x="786" y="82.5" text-anchor="middle">4</text>
+            <text class="hw-title hw-wake" style="--d:8.4s" x="776" y="114"><tspan x="776">Write the</tspan><tspan x="776" dy="20">answer</tspan></text>
+            <text class="hw-ex hw-wake" style="--d:8.4s" x="776" y="160"><tspan x="776">From the values and</tspan><tspan x="776" dy="17">medical knowledge</tspan></text>
+            <path class="hw-conn hw-draw" style="--d:0.6s" pathLength="1" d="M190 134L218.5 134"/>
+            <path class="hw-head hw-pop" style="--d:1.2s" d="M226 134L218 138.4L218 129.6Z"/>
+            <path class="hw-conn hw-draw" style="--d:2.0s" pathLength="1" d="M380 134L396.5 134"/>
+            <path class="hw-head hw-pop" style="--d:2.6s" d="M404 134L396 138.4L396 129.6Z"/>
+            <path class="hw-conn hw-draw" style="--d:5.4s" pathLength="1" d="M558 134L574.5 134"/>
+            <path class="hw-head hw-pop" style="--d:6.0s" d="M582 134L574 138.4L574 129.6Z"/>
+            <path class="hw-conn hw-draw" style="--d:7.8s" pathLength="1" d="M736 134L752.5 134"/>
+            <path class="hw-head hw-pop" style="--d:8.4s" d="M760 134L752 138.4L752 129.6Z"/>
+            <text class="hw-label hw-appear" style="--d:2.0s" x="392" y="126" text-anchor="middle">yes</text>
+            <path class="hw-dash hw-wake" style="--d:8.4s" d="M303 76L303 56Q303 44 315 44L825 44Q837 44 837 56L837 62"/>
+            <path class="hw-dash hw-wake" style="--d:8.4s" d="M837 61L837 67.5"/>
+            <path class="hw-head hw-wake" style="--d:8.4s" d="M837 75L832.6 67L841.4 67Z"/>
+            <text class="hw-label hw-wake" style="--d:8.4s" x="570" y="34" text-anchor="middle">No: answered from the conversation and medical knowledge, without the analysis results</text>
+            <text class="hw-lead" x="14" y="281">I</text>
+            <text class="hw-lead" x="14" y="307">II</text>
+            <text class="hw-lead" x="14" y="333">V2</text>
+            <path class="hw-trace" d="M32 290L36.6 290Q41.2 284.8 45.9 290L52.8 290L54.7 292.3L57.4 271L60.1 293L62.4 290L68.2 289.2Q75.9 278 83.6 290L109 290L113.6 290Q118.2 284.8 122.9 290L129.8 290L131.7 292.3L134.4 271L137.1 293L139.4 290L145.2 289.2Q152.9 278 160.6 290L186 290"/>
+            <path class="hw-trace" d="M32 316L36.6 316Q41.2 310 45.9 316L52.8 316L54.7 317.6L57.4 303L60.1 318.5L62.4 316L68.2 315.5Q75.9 306 83.6 316L109 316L113.6 316Q118.2 310 122.9 316L129.8 316L131.7 317.6L134.4 303L137.1 318.5L139.4 316L145.2 315.5Q152.9 306 160.6 316L186 316"/>
+            <path class="hw-trace" d="M32 342L36.6 342Q41.2 338.8 45.9 342L52.8 342L54.7 342.6L57.4 337L60.1 357L62.4 342L68.2 341.8Q75.9 329 83.6 342L109 342L113.6 342Q118.2 338.8 122.9 342L129.8 342L131.7 342.6L134.4 337L137.1 357L139.4 342L145.2 341.8Q152.9 329 160.6 342L186 342"/>
+            <text class="hw-cap" x="100" y="376" text-anchor="middle">Your 12-lead ECG</text>
+            <path class="hw-conn" d="M100 383L100 388.5"/>
+            <path class="hw-head" d="M100 396L95.6 388L104.4 388Z"/>
+            <rect class="hw-prog" x="12" y="398" width="176" height="64" rx="8"/>
+            <text class="hw-prog-t" x="26" y="424"><tspan x="26">ECG analysis</tspan><tspan x="26" dy="20">program</tspan></text>
+            <rect class="hw-results" x="228" y="290" width="602" height="274" rx="10"/>
+            <text class="hw-tier-t" x="242" y="328.5">Measurements</text>
+            <text class="hw-tier-s" x="242" y="348"><tspan x="242">in each lead and</tspan><tspan x="242" dy="16">across leads</tspan></text>
+            <rect class="hw-chip-on hw-choose" style="--d:3.9s" x="406" y="312" width="95" height="24" rx="12"/>
+            <text class="hw-chip-on-t hw-choose-t" style="--d:3.9s" x="453.5" y="328.5" text-anchor="middle">QT interval</text>
+            <rect class="hw-chip-on hw-choose" style="--d:4.1s" x="509" y="312" width="95" height="24" rx="12"/>
+            <text class="hw-chip-on-t hw-choose-t" style="--d:4.1s" x="556.5" y="328.5" text-anchor="middle">QTc</text>
+            <rect class="hw-chip-on hw-choose" style="--d:4.3s" x="612" y="312" width="95" height="24" rx="12"/>
+            <text class="hw-chip-on-t hw-choose-t" style="--d:4.3s" x="659.5" y="328.5" text-anchor="middle">QRS onset</text>
+            <rect class="hw-chip-on hw-choose" style="--d:4.5s" x="715" y="312" width="95" height="24" rx="12"/>
+            <text class="hw-chip-on-t hw-choose-t" style="--d:4.5s" x="762.5" y="328.5" text-anchor="middle">T offset</text>
+            <rect class="hw-group hw-appear" style="--d:4.9s" x="400" y="306" width="416" height="36" rx="16"/>
+            <rect class="hw-chip" x="406" y="354" width="80.3" height="24" rx="12"/>
+            <text class="hw-chip-t" x="446.1" y="370.5" text-anchor="middle">RR interval</text>
+            <rect class="hw-chip" x="494.3" y="354" width="78.9" height="24" rx="12"/>
+            <text class="hw-chip-t" x="533.7" y="370.5" text-anchor="middle">PR interval</text>
+            <rect class="hw-chip" x="581.2" y="354" width="91.9" height="24" rx="12"/>
+            <text class="hw-chip-t" x="627.1" y="370.5" text-anchor="middle">QRS duration</text>
+            <text class="hw-more" x="683" y="370.5">and more</text>
+            <path class="hw-rule" d="M228 392L830 392"/>
+            <text class="hw-tier-t" x="242" y="422.5">Findings</text>
+            <text class="hw-tier-s" x="242" y="442"><tspan x="242">in a lead or for</tspan><tspan x="242" dy="16">the whole ECG</tspan></text>
+            <rect class="hw-chip" x="406" y="406" width="118.1" height="24" rx="12"/>
+            <text class="hw-chip-t" x="465" y="422.5" text-anchor="middle">ST elevation in V2</text>
+            <rect class="hw-chip" x="532.1" y="406" width="139.7" height="24" rx="12"/>
+            <text class="hw-chip-t" x="602" y="422.5" text-anchor="middle">T-wave inversion in III</text>
+            <rect class="hw-chip" x="406" y="440" width="167.3" height="24" rx="12"/>
+            <text class="hw-chip-t" x="489.7" y="456.5" text-anchor="middle">Pathological Q wave in aVF</text>
+            <rect class="hw-chip" x="581.3" y="440" width="117.5" height="24" rx="12"/>
+            <text class="hw-chip-t" x="640" y="456.5" text-anchor="middle">Left axis deviation</text>
+            <text class="hw-more" x="708.8" y="456.5">and more</text>
+            <path class="hw-rule" d="M228 478L830 478"/>
+            <text class="hw-tier-t" x="242" y="508.5"><tspan x="242">Diagnostic</tspan><tspan x="242" dy="18">statements</tspan></text>
+            <rect class="hw-chip" x="406" y="492" width="134.3" height="24" rx="12"/>
+            <text class="hw-chip-t" x="473.2" y="508.5" text-anchor="middle">First-degree AV block</text>
+            <rect class="hw-chip" x="548.3" y="492" width="168" height="24" rx="12"/>
+            <text class="hw-chip-t" x="632.3" y="508.5" text-anchor="middle">Left ventricular hypertrophy</text>
+            <rect class="hw-chip" x="406" y="526" width="113.5" height="24" rx="12"/>
+            <text class="hw-chip-t" x="462.7" y="542.5" text-anchor="middle">Inferior infarction</text>
+            <rect class="hw-chip" x="527.5" y="526" width="207.7" height="24" rx="12"/>
+            <text class="hw-chip-t" x="631.3" y="542.5" text-anchor="middle">Complete right bundle branch block</text>
+            <text class="hw-more" x="745.2" y="542.5">and more</text>
+            <path class="hw-conn" d="M190 430L218.5 430"/>
+            <path class="hw-head" d="M226 430L218 434.4L218 425.6Z"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.1s" d="M481 193L481 197"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.15s" d="M481 200L481 204"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.19s" d="M481 207L481 211"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.24s" d="M481 214L481 218"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.29s" d="M481 221L481 225"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.33s" d="M481 228L481 232"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.38s" d="M481 235L481 239"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.43s" d="M481 242L481 246"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.47s" d="M481 249L481 253"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.52s" d="M481 256L481 260"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.56s" d="M481 263L481 267"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.61s" d="M481 270L481 274"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.66s" d="M481 277L481 281"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.7s" d="M481 284L481 288"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.75s" d="M481 291L481 295"/>
+            <path class="hw-read-head hw-pop" style="--d:3.8s" d="M481 304L485.4 296L476.6 296Z"/>
+            <text class="hw-label hw-appear" style="--d:3.1s" x="471" y="228" text-anchor="end">picks results</text>
+            <path class="hw-read hw-draw" style="--d:5.6s" pathLength="1" d="M608 305L608 200.5"/>
+            <path class="hw-read-head hw-pop" style="--d:6.2s" d="M608 193L612.4 201L603.6 201Z"/>
+            <text class="hw-label hw-appear" style="--d:5.6s" x="598" y="228" text-anchor="end">chosen results</text>
+            <path class="hw-ev hw-draw" style="--d:7.0s" pathLength="1" d="M711 193L711 296.5"/>
+            <path class="hw-ev-head hw-pop" style="--d:7.6s" d="M711 304L706.6 296L715.4 296Z"/>
+            <text class="hw-label hw-appear" style="--d:7.0s" x="721" y="228">points to mark</text>
+            <path class="hw-conn hw-draw" style="--d:9.0s" pathLength="1" d="M914 134L942.5 134"/>
+            <path class="hw-head hw-pop" style="--d:9.6s" d="M950 134L942 138.4L942 129.6Z"/>
+            <rect class="hw-card hw-wake" style="--d:9.6s" x="952" y="78" width="196" height="308" rx="12"/>
+            <text class="hw-say-h hw-wake" style="--d:9.6s" x="966" y="102">Answer</text>
+            <text class="hw-say hw-type" style="--d:10.0s;--t:0.58s" x="966" y="126">The QTc is 489 ms, which</text>
+            <text class="hw-say hw-type" style="--d:10.63s;--t:0.56s" x="966" y="145">is prolonged. The marks</text>
+            <text class="hw-say hw-type" style="--d:11.24s;--t:0.54s" x="966" y="164">show each QT interval,</text>
+            <text class="hw-say hw-type" style="--d:11.83s;--t:0.64s" x="966" y="183">from QRS onset to T offset.</text>
+            <path class="hw-ev hw-draw" style="--d:12.52s" pathLength="1" d="M832 324L942.5 324"/>
+            <path class="hw-ev-head hw-pop" style="--d:13.12s" d="M950 324L942 328.4L942 319.6Z"/>
+            <text class="hw-label hw-appear" style="--d:12.52s" x="891" y="314" text-anchor="middle">drawn on the ECG</text>
+            <path class="hw-trace hw-appear" style="--d:13.02s" d="M966 300L969.4 300Q972.7 294.8 976.1 300L981.1 300L982.5 302.3L984.5 281L986.4 303L988.1 300L992.3 299.2Q997.9 288 1003.5 300L1022 300L1025.4 300Q1028.7 294.8 1032.1 300L1037.1 300L1038.5 302.3L1040.5 281L1042.4 303L1044.1 300L1048.3 299.2Q1053.9 288 1059.5 300L1078 300L1081.4 300Q1084.7 294.8 1088.1 300L1093.1 300L1094.5 302.3L1096.5 281L1098.4 303L1100.1 300L1104.3 299.2Q1109.9 288 1115.5 300L1134 300"/>
+            <path class="hw-trace hw-appear" style="--d:13.02s" d="M966 324L969.4 324Q972.7 318 976.1 324L981.1 324L982.5 325.6L984.5 311L986.4 326.5L988.1 324L992.3 323.5Q997.9 314 1003.5 324L1022 324L1025.4 324Q1028.7 318 1032.1 324L1037.1 324L1038.5 325.6L1040.5 311L1042.4 326.5L1044.1 324L1048.3 323.5Q1053.9 314 1059.5 324L1078 324L1081.4 324Q1084.7 318 1088.1 324L1093.1 324L1094.5 325.6L1096.5 311L1098.4 326.5L1100.1 324L1104.3 323.5Q1109.9 314 1115.5 324L1134 324"/>
+            <path class="hw-trace hw-appear" style="--d:13.02s" d="M966 348L969.4 348Q972.7 344.8 976.1 348L981.1 348L982.5 348.6L984.5 343L986.4 363L988.1 348L992.3 347.8Q997.9 335 1003.5 348L1022 348L1025.4 348Q1028.7 344.8 1032.1 348L1037.1 348L1038.5 348.6L1040.5 343L1042.4 363L1044.1 348L1048.3 347.8Q1053.9 335 1059.5 348L1078 348L1081.4 348Q1084.7 344.8 1088.1 348L1093.1 348L1094.5 348.6L1096.5 343L1098.4 363L1100.1 348L1104.3 347.8Q1109.9 335 1115.5 348L1134 348"/>
+            <rect class="hw-mark hw-grow" style="--d:13.42s" x="981.1" y="276" width="22.4" height="90" rx="2"/>
+            <rect class="hw-mark hw-grow" style="--d:13.67s" x="1037.1" y="276" width="22.4" height="90" rx="2"/>
+            <rect class="hw-mark hw-grow" style="--d:13.92s" x="1093.1" y="276" width="22.4" height="90" rx="2"/>
+            </svg>
+            <button class="overlay-toggle" type="button" hidden><span class="toggle-icon" aria-hidden="true"><svg class="icon-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg><svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></span></button>
+          </div>
+        </div>
+        <p class="hw-swipe" aria-hidden="true">Scroll sideways to see the whole figure.</p>
+      </div>
+
+      <ol class="steps">
+        <li><strong>Is ECG analysis needed to answer?</strong> A general question (such as <q>What is a normal PR interval?</q>) or a follow-up that earlier answers already cover is answered from the conversation, any attached document and medical knowledge, without the analysis results. Any other question about this ECG goes on to step 2.</li>
+        <li><strong>Choose which results to read.</strong> The analysis program reports three kinds of results: measurements (wave onsets, offsets and peaks, as well as durations, intervals, amplitudes and axis, in each lead and across leads), findings (such as ST elevation in a lead) and diagnostic statements (such as first-degree AV block). The agent picks the kinds the question needs, all three for a full interpretation. Unless the question needs everything in them, it then picks the leads and items that matter.</li>
+        <li><strong>Decide what to mark.</strong> When you ask to see something, or what an answer is based on, the agent picks the measured onsets, offsets or peaks that locate it. If the chosen results hold no position for it, the measured wave that contains it is marked instead, such as the QRS complex for a Q wave. If no measured wave contains it, nothing is marked and the answer says so. When you have not asked but the answer rests on something that can be marked, the answer ends by offering to mark it.</li>
+        <li><strong>Write the answer.</strong> The answer is written from the values of the chosen results, the conversation so far, any document attached to the chat and medical knowledge. The demo then draws the marks on the 12-lead tracing below the answer.</li>
+      </ol>
+
+      <h3>What this means for the answers</h3>
+      <p>The answers are only as good as the measurements. On a noisy or unusual recording, a misplaced wave onset or offset can lead to a wrong answer. That is why the agent can show its evidence: ask to see it, and the marks sit exactly at the measured positions, so you can check them against the ECG.</p>
     </section>
 
-    <section aria-labelledby="before">
-      <h2 id="before">Before you use it</h2>
+    <section id="before" class="panel" aria-labelledby="before-title">
+      <h2 id="before-title" tabindex="-1">Before you try it</h2>
       <div class="notice">
         <ul>
           <li>This is a research demo. It is not a medical device and must not be used to diagnose or treat patients. Its answers can be wrong.</li>
-          <li>Upload only recordings you are allowed to share outside your institution, and do not upload, attach or type anything that could identify a patient. A WFDB header can hold patient details in its comment lines, so check it before uploading.</li>
-          <li>To write each answer, your question, the earlier messages in the chat, the text of any document you attach, and the analysis results are sent to an external language model service. The ECG signal, its image and the highlighted tracing are not sent.</li>
-          <li>There is no account: each browser gets its own guest session. Closing the browser usually ends it, and its chats cannot be opened again; chats left unused for a day are deleted. If you rate an answer, a copy of that chat is kept with your rating.</li>
-          <li>Use is limited per day, and the demo may be unavailable at times.</li>
+          <li>Do not upload, attach or type anything that could identify a patient, and upload only recordings you are allowed to share outside your institution. A WFDB header can hold patient details in its comment lines, so check it before uploading.</li>
         </ul>
       </div>
+
+      <h3>Opening the demo</h3>
+      <ul class="plain">
+        <li>No sign-up is needed. On your first visit, a notice page from ngrok, the service that serves the demo, asks you to confirm. It appears for every site served this way and does not mean anything is wrong. Select <strong>Visit Site</strong> to continue.</li>
+        <li>If the demo does not open on a hospital network, try another network.</li>
+        <li>The 12-lead tracing is easier to read on a larger screen, and uploading a recording is easier from a computer.</li>
+        <li>The demo is available in English and Korean. It starts in Korean when your browser's first language is Korean, and you can switch the language in Settings, under General.</li>
+      </ul>
+
+      <h3>What you can attach</h3>
+      <ul class="plain">
+        <li>One of 6,188 sample ECGs from two public research datasets, PTB-XL and MIMIC-IV-ECG. They are listed by ID, without their diagnoses.</li>
+        <li>Your own 12-lead recording in WFDB format, a <code>.hea</code> header file and a <code>.dat</code> signal file. You confirm its sampling rate and lead order when you attach it.</li>
+        <li>Photos, PDFs, scanned paper ECGs, files exported from ECG machines in other formats (such as XML) and single-lead recordings cannot be read as ECGs.</li>
+        <li>If you know the patient has a pacemaker, turn on pacemaker detection when you attach the ECG. It looks for ventricular pacing spikes only and can make mistakes, so it is off by default. When it finds them, diagnostic statements that cannot be read from paced beats, such as bundle branch block, ventricular hypertrophy, infarction or ischemia, are not assessed for that recording.</li>
+        <li>A document, such as a PDF, can be attached to a question. From then on, for each question in that chat, the parts of the document that match the question are used as reference material for the answer.</li>
+      </ul>
+
+      <h3>Where your messages go</h3>
+      <ul class="plain">
+        <li>To write each answer, the demo sends your question, the earlier messages in the chat, text from any document you attach and the analysis results to an external language model service. The ECG signal, its image and the marked tracing are not sent.</li>
+        <li>If you rate an answer, a copy of that chat is kept with your rating.</li>
+      </ul>
+
+      <h3>Sessions and limits</h3>
+      <ul class="plain">
+        <li>There is no account: each browser gets its own guest session. Closing the browser usually ends it, signing out starts a new one, and the chats of an ended session cannot be opened again. A session left unused for a day is deleted, with its chats.</li>
+        <li>Use is limited per day. The limit resets every day at 00:00 UTC (09:00 in Korea).</li>
+        <li>The demo may be unavailable at times, for example while it is being updated. If it does not open or answer, try again in a few minutes.</li>
+      </ul>
     </section>
 
-    <section aria-labelledby="how">
-      <h2 id="how">How it works</h2>
-      <p>The language model does not look at the ECG signal or its image. A separate ECG analysis program measures the recording (wave boundaries, intervals, amplitudes, axis) and reports findings and diagnostic statements. For each question, the agent decides whether the question needs the recording at all (a general question such as <q>What is a normal PR interval?</q> does not), chooses which of the analysis results bear on it, and writes the answer from them.</p>
-      <p>The answers are only as good as these measurements: on a noisy or unusual recording, a misplaced wave boundary leads to a wrong answer. When you ask to see something, the agent picks the measured wave boundaries or peaks that locate it, and the demo highlights them on the 12-lead tracing, so you can check the answer against the ECG.</p>
-    </section>
-
-    <section aria-labelledby="data">
-      <h2 id="data">Data</h2>
-      <p>The sample ECGs come from <a href="https://physionet.org/content/ptb-xl/1.0.3/">PTB-XL</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>) and <a href="https://physionet.org/content/mimic-iv-ecg/1.0/">MIMIC-IV-ECG</a> (<a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a>), both published on PhysioNet. They are the ECGs used in the <a href="https://arxiv.org/abs/2603.14326">ECG-Reasoning-Benchmark</a>.</p>
+    <section id="contact" class="panel" aria-labelledby="contact-title">
+      <h2 id="contact-title" tabindex="-1">Contact</h2>
+      <p>Questions and feedback are welcome.</p>
+      <dl class="contact prose">
+        <dt>Email</dt>
+        <dd>ojw0123 (at) kaist.ac.kr</dd>
+        <dt>Feedback on one answer</dt>
+        <dd>Rate it in the demo with the thumbs-up or thumbs-down button below the answer, choose a reason and, if you like, add a comment.</dd>
+        <dt>Feedback on a whole conversation</dt>
+        <dd>Download it from the chat's menu as text or PDF, and attach it to an email.</dd>
+        <dt>Homepage</dt>
+        <dd><a href="https://jwoo5.github.io/">jwoo5.github.io</a></dd>
+      </dl>
     </section>
 
     <footer>
-      <p>Questions and feedback: ojw0123 (at) kaist.ac.kr</p>
+      <p>The sample ECGs come from <a href="https://physionet.org/content/ptb-xl/1.0.3/">PTB-XL</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>) and <a href="https://physionet.org/content/mimic-iv-ecg/1.0/">MIMIC-IV-ECG</a> (<a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a>), both published on PhysioNet. They are the ECGs used in the <a href="https://arxiv.org/abs/2603.14326">ECG-Reasoning-Benchmark</a>.</p>
     </footer>
   </main>
+
+  <script>
+    document.documentElement.classList.add('js');
+    (function () {
+      var SECTIONS = ['home', 'how', 'before', 'contact'];
+      // Anchors of the earlier single-page layout open the section that now holds them.
+      var ALIASES = { what: 'home', try: 'home', data: 'home' };
+      var nav = document.querySelector('.tabs');
+      var tabs = Array.prototype.slice.call(nav.querySelectorAll('[data-tab]'));
+      var onShow = [];
+
+      function sectionFor(hash) {
+        var id = (hash || '').replace(/^#/, '');
+        try {
+          id = decodeURIComponent(id);
+        } catch (error) {
+          return 'home';
+        }
+        if (SECTIONS.indexOf(id) !== -1) return id;
+        return ALIASES[id] || 'home';
+      }
+
+      function heading(id) { return document.getElementById(id).querySelector('h2'); }
+
+      function show(id) {
+        SECTIONS.forEach(function (name) {
+          document.getElementById(name).hidden = name !== id;
+        });
+        tabs.forEach(function (tab) {
+          if (tab.getAttribute('data-tab') === id) tab.setAttribute('aria-current', 'page');
+          else tab.removeAttribute('aria-current');
+        });
+        onShow.forEach(function (listener) { listener(id); });
+      }
+
+      // Focus moves to the shown section's heading, and the buttons are
+      // scrolled back into view when they, or that heading, are off screen.
+      function focusSection(id) {
+        var title = heading(id);
+        title.focus({ preventScroll: true });
+        if (nav.getBoundingClientRect().top < 0 || title.getBoundingClientRect().bottom > window.innerHeight) {
+          nav.scrollIntoView();
+        }
+      }
+
+      // A link to a section shows it in place of the current one. Home is kept
+      // without a fragment, so reloading it starts at the top of the page.
+      document.addEventListener('click', function (event) {
+        var link = event.target.closest('a[href^="#"]');
+        if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        var id = link.getAttribute('href').slice(1);
+        if (SECTIONS.indexOf(id) === -1) return;
+        event.preventDefault();
+        var url = id === 'home' ? location.pathname + location.search : '#' + id;
+        if (sectionFor(location.hash) !== id) history.pushState(null, '', url);
+        show(id);
+        focusSection(id);
+      });
+      // Back and forward show the section the address names; focus that was
+      // inside the section being hidden moves to the new section's heading.
+      window.addEventListener('popstate', function () {
+        var id = sectionFor(location.hash);
+        var active = document.activeElement;
+        var lost = SECTIONS.some(function (name) {
+          return name !== id && document.getElementById(name).contains(active);
+        });
+        show(id);
+        if (lost) heading(id).focus({ preventScroll: true });
+      });
+
+      var player = document.querySelector('[data-player]');
+      if (player) setUpPlayer(player);
+      var figure = document.querySelector('.hw');
+      if (figure) setUpFigure(figure);
+      show(sectionFor(location.hash));
+
+      // The figure walks through its example question, rests on the finished
+      // figure and starts again, while How it works is shown and the page is
+      // in view. Clicking the figure pauses it on the finished figure, and
+      // clicking again starts it over. Readers who asked for reduced motion
+      // get the finished figure only, since the CSS animates nothing for them.
+      function setUpFigure(root) {
+        // One run of the CSS animations takes about 14.5 s; the rest of the
+        // cycle is the pause before the next run.
+        var CYCLE = 22000;
+        var toggle = root.querySelector('.overlay-toggle');
+        var scroller = root.querySelector('.hw-scroll');
+        var motion = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var wanted = motion;
+        var onHow = false;
+        var timer = 0;
+
+        // The scroller takes keyboard focus only when there is something to scroll to.
+        function syncScroller() {
+          scroller.tabIndex = scroller.scrollWidth > scroller.clientWidth ? 0 : -1;
+        }
+        // Removing and re-adding the class restarts the animations.
+        function restart() {
+          root.classList.remove('play');
+          void root.getBoundingClientRect();
+          root.classList.add('play');
+        }
+        function stop() {
+          clearInterval(timer);
+          timer = 0;
+          root.classList.remove('play');
+        }
+        function label() {
+          toggle.setAttribute('data-state', wanted ? 'playing' : 'paused');
+          toggle.setAttribute('aria-label', wanted ? 'Pause the figure animation' : 'Play the figure animation');
+        }
+        function update() {
+          var running = wanted && onHow && document.visibilityState === 'visible';
+          if (running && !timer) {
+            restart();
+            timer = setInterval(restart, CYCLE);
+          } else if (!running && timer) {
+            stop();
+          }
+          label();
+        }
+
+        if (motion) {
+          toggle.hidden = false;
+          toggle.addEventListener('click', function () {
+            wanted = !wanted;
+            update();
+          });
+          document.addEventListener('visibilitychange', update);
+        }
+        window.addEventListener('resize', function () {
+          if (onHow) syncScroller();
+        });
+        onShow.push(function (id) {
+          onHow = id === 'how';
+          if (onHow) syncScroller();
+          // Showing the section again starts the figure from the beginning.
+          if (timer) stop();
+          update();
+        });
+      }
+
+      // The clips play one after another while Home is shown and the page is
+      // in view. A clip without a video shows the placeholder for as long as
+      // its description takes to read. Clicking the screen pauses and plays.
+      // Choosing a clip plays the sequence on from that clip.
+      function setUpPlayer(root) {
+        var clips = Array.prototype.slice.call(root.querySelectorAll('.clip'));
+        var video = root.querySelector('video');
+        var placeholder = root.querySelector('.placeholder');
+        var placeholderTitle = root.querySelector('.placeholder-title');
+        var detail = root.querySelector('.clip-detail');
+        var toggle = root.querySelector('.overlay-toggle');
+        toggle.hidden = false;
+        var texts = clips.map(function (clip) {
+          var text = clip.parentNode.querySelector('.clip-text');
+          detail.appendChild(text);
+          clip.disabled = false;
+          return text;
+        });
+        var index = 0;
+        var wanted = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var onHome = true;
+        var elapsed = 0;
+        var frame = 0;
+        var last = 0;
+
+        function current() { return clips[index]; }
+        function bar(clip) { return clip.querySelector('.clip-bar span'); }
+        function setProgress(fraction) { bar(current()).style.transform = 'scaleX(' + fraction + ')'; }
+        function running() { return wanted && onHome && document.visibilityState === 'visible'; }
+        function readingTime() {
+          var words = texts[index].textContent.trim().split(/\s+/).length;
+          return Math.max(7000, words * 320);
+        }
+
+        function stopTimer() {
+          if (frame) cancelAnimationFrame(frame);
+          frame = 0;
+        }
+        function startTimer() {
+          if (frame) return;
+          last = performance.now();
+          frame = requestAnimationFrame(tick);
+        }
+        function tick(now) {
+          var duration = readingTime();
+          elapsed += now - last;
+          last = now;
+          setProgress(Math.min(elapsed / duration, 1));
+          if (elapsed >= duration) {
+            frame = 0;
+            select(index + 1);
+            return;
+          }
+          frame = requestAnimationFrame(tick);
+        }
+
+        function label() {
+          toggle.setAttribute('data-state', wanted ? 'playing' : 'paused');
+          toggle.setAttribute('aria-label', wanted ? 'Pause the clips' : 'Play the clips');
+        }
+
+        function update() {
+          var src = current().getAttribute('data-src');
+          if (running()) {
+            if (src) {
+              var playing = video.play();
+              if (playing) {
+                playing.catch(function (error) {
+                  // A play cut short by a pause or a new clip is not a failure.
+                  if (error && error.name === 'AbortError') return;
+                  if (error && error.name === 'NotAllowedError') {
+                    wanted = false;
+                    label();
+                  } else {
+                    skipBroken();
+                  }
+                });
+              }
+            } else {
+              startTimer();
+            }
+          } else if (src) {
+            video.pause();
+          } else {
+            stopTimer();
+          }
+          label();
+        }
+
+        // A clip whose video cannot be played shows the placeholder instead.
+        function skipBroken() {
+          current().setAttribute('data-src', '');
+          select(index);
+        }
+
+        function select(next) {
+          stopTimer();
+          video.pause();
+          index = (next + clips.length) % clips.length;
+          elapsed = 0;
+          clips.forEach(function (clip, position) {
+            if (position === index) clip.setAttribute('aria-current', 'true');
+            else clip.removeAttribute('aria-current');
+            bar(clip).style.transform = 'scaleX(0)';
+          });
+          texts.forEach(function (text, position) {
+            text.classList.toggle('active', position === index);
+          });
+          var clip = current();
+          var src = clip.getAttribute('data-src');
+          if (src) {
+            placeholder.hidden = true;
+            video.hidden = false;
+            if (video.getAttribute('src') !== src) {
+              video.poster = clip.getAttribute('data-poster') || '';
+              video.src = src;
+            } else {
+              video.currentTime = 0;
+            }
+          } else {
+            video.hidden = true;
+            if (video.hasAttribute('src')) {
+              video.removeAttribute('src');
+              video.load();
+            }
+            placeholder.hidden = false;
+            placeholderTitle.textContent = clip.querySelector('.clip-title').textContent;
+          }
+          update();
+        }
+
+        video.addEventListener('timeupdate', function () {
+          if (video.duration) setProgress(video.currentTime / video.duration);
+        });
+        video.addEventListener('ended', function () {
+          select(index + 1);
+        });
+        video.addEventListener('error', function () {
+          if (video.hasAttribute('src')) skipBroken();
+        });
+        clips.forEach(function (clip, position) {
+          clip.addEventListener('click', function () {
+            wanted = true;
+            select(position);
+          });
+        });
+        toggle.addEventListener('click', function () {
+          wanted = !wanted;
+          update();
+        });
+        document.addEventListener('visibilitychange', update);
+        onShow.push(function (id) {
+          onHome = id === 'home';
+          update();
+        });
+        select(0);
+      }
+    })();
+  </script>
 </body>
 </html>
