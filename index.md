@@ -45,7 +45,7 @@ Building on my experience in constructing ECG datasets, I am currently working o
     <div class="title"><a href="./ecg-reasoning-agent/">ECG Reasoning Agent</a></div>
     <div class="periodical">A conversational agent that answers questions about a 12-lead ECG and, when asked, highlights on the tracing the waves and intervals behind its answer. A live research demo is open to try.</div>
     <div class="links">
-      <a href="./ecg-reasoning-agent/" class="btn btn-sm z-depth-0" role="button" style="font-size:12px;">Project Page</a>
+      <a href="./ecg-reasoning-agent/" class="btn btn-sm z-depth-0" role="button" style="font-size:12px;"><i class="fa-solid fa-globe" aria-hidden="true"></i>Project Page</a>
     </div>
   </div>
 </div>
