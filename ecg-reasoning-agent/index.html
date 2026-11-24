@@ -7,6 +7,8 @@
   <title>ECG Reasoning Agent</title>
   <meta name="description" content="An agent that answers questions about a 12-lead ECG and, when asked, marks the waves and intervals behind its answer on the tracing. Live research demo.">
   <link rel="canonical" href="https://jwoo5.github.io/ecg-reasoning-agent/">
+  <link rel="alternate" hreflang="en" href="https://jwoo5.github.io/ecg-reasoning-agent/">
+  <link rel="alternate" hreflang="ko" href="https://jwoo5.github.io/ecg-reasoning-agent/ko/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="ECG Reasoning Agent">
   <meta property="og:description" content="Ask an agent questions about a 12-lead ECG and have it mark its evidence on the tracing. Live research demo.">
@@ -16,6 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@400;600&text=%ED%95%9C%EA%B5%AD%EC%96%B4&display=swap">
   <style>
     :root {
       --bg: #ffffff;
@@ -146,6 +149,35 @@
     .tab.demo:hover { filter: brightness(1.1); }
     .tab.demo svg { width: 0.85em; height: 0.85em; }
 
+    /* Language switch: the page's two languages, the current one filled */
+    .lang-switch {
+      display: flex;
+      justify-content: flex-end;
+      margin: -28px 0 14px;
+    }
+    .lang-switch-group {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--card);
+      font-size: 0.9rem;
+      line-height: 1;
+    }
+    .lang-switch a {
+      padding: 6px 14px;
+      color: var(--heading);
+      text-decoration: none;
+    }
+    .lang-switch a:hover { background: var(--chosen); }
+    .lang-switch a[lang="ko"] { font-family: "Hahmlet", "Crimson Pro", serif; }
+    .lang-switch a[aria-current] {
+      background: var(--primary-bg);
+      color: var(--primary-text);
+      font-weight: 600;
+    }
+    @media (max-width: 600px) { .lang-switch { margin: -16px 0 12px; } }
+
     /* Sections */
     .panel { padding-top: 12px; }
     h2 {
@@ -263,6 +295,8 @@
     .clip-detail .clip-text {
       grid-area: 1 / 1;
       margin: 0;
+      padding: 2px 0 2px 14px;
+      border-left: 3px solid var(--line);
       font-size: 1rem;
       visibility: hidden;
     }
@@ -425,6 +459,7 @@
 </head>
 <body>
   <main>
+    <nav class="lang-switch" aria-label="Language"><span class="lang-switch-group"><a href="./" aria-current="page" lang="en">English</a><a href="ko/" hreflang="ko" lang="ko">한국어</a></span></nav>
     <header>
       <h1>ECG Reasoning Agent</h1>
       <p class="lead">Ask questions about a 12-lead ECG in plain language. Ask the agent to show its evidence, and it marks the waves and intervals behind its answer on the tracing.</p>
@@ -441,7 +476,7 @@
 
     <section id="home" class="panel" aria-labelledby="home-title">
       <h2 id="home-title" tabindex="-1">What it does</h2>
-      <p>Attach a 12-lead ECG, one of the public samples or your own recording, and ask about it in a chat. An ECG analysis program first analyzes the recording, and the agent answers from the program's measurements, findings and diagnostic statements. When you ask to see the evidence, it marks the waves and intervals its answer rests on, so you can check the answer against the tracing.</p>
+      <p>Attach a 12-lead ECG, one of the public samples or your own recording, and ask about it in a chat; attach up to four to compare them. An ECG analysis program first analyzes each recording, and the agent answers from the program's measurements, findings and diagnostic statements. When you ask to see the evidence, it marks the waves and intervals its answer rests on, so you can check the answer against the tracing. When your reply would change its reading or what to do, it may ask you one question below its answer, with replies you can click.</p>
       <p>This is a research prototype. We are studying whether an assistant can explain an ECG reading and show the evidence for it, so that a clinician can check the answer rather than take it on trust. We would especially like clinicians to try it and tell us where it is wrong, unclear or unhelpful (see <a href="#contact">Contact</a>).</p>
 
       <div class="player" data-player>
@@ -461,46 +496,46 @@
           <!-- data-src and data-poster name each clip's video and still image, such as media/ask.mp4 and media/ask.jpg; a clip without data-src shows the placeholder above. -->
           <ul class="clips">
             <li>
-              <button class="clip" type="button" data-src="" data-poster="" aria-describedby="clip-text-0" disabled>
+              <button class="clip" type="button" data-src="media/clip1_reasoning.mp4" data-poster="media/clip1_reasoning.jpg" aria-describedby="clip-text-0" disabled>
                 <span class="clip-bar"><span></span></span>
                 <span class="clip-title">Check the reasoning</span>
               </button>
               <p class="clip-text" id="clip-text-0">Ask whether a diagnosis fits, such as <q>Are there signs of an old inferior myocardial infarction? Why?</q> The answer names the findings and measurements it rests on, so you can follow how the agent reached it.</p>
             </li>
             <li>
-              <button class="clip" type="button" data-src="" data-poster="" aria-describedby="clip-text-1" disabled>
+              <button class="clip" type="button" data-src="media/clip2_measurements.mp4" data-poster="media/clip2_measurements.jpg" aria-describedby="clip-text-1" disabled>
                 <span class="clip-bar"><span></span></span>
                 <span class="clip-title">Check the measurements</span>
               </button>
               <p class="clip-text" id="clip-text-1">Ask for the numbers, such as <q>What are the PR, QRS and QT intervals?</q> The answer gives the measured values, so you can compare them with your own reading of the tracing.</p>
             </li>
             <li>
-              <button class="clip" type="button" data-src="" data-poster="" aria-describedby="clip-text-2" disabled>
+              <button class="clip" type="button" data-src="media/clip3_evidence.mp4" data-poster="media/clip3_evidence.jpg" aria-describedby="clip-text-2" disabled>
                 <span class="clip-bar"><span></span></span>
                 <span class="clip-title">See the evidence</span>
               </button>
               <p class="clip-text" id="clip-text-2">Ask to see the evidence, such as <q>Is the QT interval prolonged? Show me where you measured it.</q> Below the answer, the 12-lead tracing shows each QT interval marked where it was measured. A result with no position on the tracing, such as the QRS axis, is given in words without a mark.</p>
             </li>
             <li>
-              <button class="clip" type="button" data-src="" data-poster="" aria-describedby="clip-text-3" disabled>
-                <span class="clip-bar"><span></span></span>
-                <span class="clip-title">Know its limits</span>
-              </button>
-              <p class="clip-text" id="clip-text-3">Ask about something the agent does not analyze, such as <q>Mark the U waves.</q> The answer says that U waves cannot be marked and why, without guessing whether the recording has them.</p>
-            </li>
-            <li>
-              <button class="clip" type="button" data-src="" data-poster="" aria-describedby="clip-text-4" disabled>
+              <button class="clip" type="button" data-src="media/clip5_followup.mp4" data-poster="media/clip5_followup.jpg" aria-describedby="clip-text-3" disabled>
                 <span class="clip-bar"><span></span></span>
                 <span class="clip-title">Ask a follow-up</span>
               </button>
-              <p class="clip-text" id="clip-text-4">Ask another question in the same chat, such as <q>Is that normal?</q> after an answer. The answer builds on the conversation so far.</p>
+              <p class="clip-text" id="clip-text-3">Ask another question in the same chat, such as <q>Is that normal?</q> after an answer. The answer builds on the conversation so far. The agent may also ask you one question below its answer, with replies you can click, when your reply would change its reading or what to do.</p>
+            </li>
+            <li>
+              <button class="clip" type="button" data-src="media/clip6_compare.mp4" data-poster="media/clip6_compare.jpg" aria-describedby="clip-text-4" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">Compare ECGs</span>
+              </button>
+              <p class="clip-text" id="clip-text-4">Attach another ECG to the same chat and ask, such as <q>What changed since the first ECG?</q> The answer says which ECG each value comes from. Ask to see the evidence, and the marks are drawn on each ECG's own tracing.</p>
             </li>
           </ul>
         </div>
         <div class="clip-detail" id="clip-detail"></div>
       </div>
 
-      <p style="margin-top:14px">Each answer takes several seconds or more, and a line above it shows which step the agent is on.</p>
+      <p style="margin-top:14px">Each answer takes about half a minute, sometimes more, and a line above it shows which step the agent is on.</p>
     </section>
 
     <section id="how" class="panel" aria-labelledby="how-title">
@@ -657,10 +692,22 @@
 
       <ol class="steps">
         <li><strong>Is ECG analysis needed to answer?</strong> A general question (such as <q>What is a normal PR interval?</q>) or a follow-up that earlier answers already cover is answered from the conversation, any attached document and medical knowledge, without the analysis results. Any other question about this ECG goes on to step 2.</li>
-        <li><strong>Choose which results to read.</strong> The analysis program reports three kinds of results: measurements (wave onsets, offsets and peaks, as well as durations, intervals, amplitudes and axis, in each lead and across leads), findings (such as ST elevation in a lead) and diagnostic statements (such as first-degree AV block). The agent picks the kinds the question needs, all three for a full interpretation. Unless the question needs everything in them, it then picks the leads and items that matter.</li>
-        <li><strong>Decide what to mark.</strong> When you ask to see something, or what an answer is based on, the agent picks the measured onsets, offsets or peaks that locate it. If the chosen results hold no position for it, the measured wave that contains it is marked instead, such as the QRS complex for a Q wave. If no measured wave contains it, nothing is marked and the answer says so. When you have not asked but the answer rests on something that can be marked, the answer ends by offering to mark it.</li>
-        <li><strong>Write the answer.</strong> The answer is written from the values of the chosen results, the conversation so far, any document attached to the chat and medical knowledge. The demo then draws the marks on the 12-lead tracing below the answer.</li>
+        <li><strong>Choose which results to read.</strong> The analysis program reports three kinds of results: measurements (wave onsets, offsets and peaks, as well as durations, intervals, amplitudes and axis, in each lead and across leads), findings (such as ST elevation in a lead) and diagnostic statements (such as first-degree AV block). In a chat with several ECGs, the agent first picks the ECGs the question is about. It picks the kinds the question needs, all three for a full interpretation, and then the leads and items that matter.</li>
+        <li><strong>Decide what to mark.</strong> When you ask to see something on the ECG, the agent picks the measured onsets, offsets or peaks that locate it. If the analysis holds no position for it, the measured wave that contains it is marked instead, such as the QRS complex for a Q wave. If no measured wave contains it, nothing is marked and the answer says so. When you have not asked but the answer rests on something that can be marked, a <q>Show the evidence on the ECG</q> button appears below the answer, once for each ECG.</li>
+        <li><strong>Write the answer.</strong> The answer is written from the values of the chosen results, the conversation so far, any document attached to the chat and medical knowledge. The demo then draws the marks on the 12-lead tracing below the answer. When your reply would change the reading or what to do, the agent may also ask one question below the answer, with replies to click, an <q>I'm not sure</q> button and a field to type your own reply, or ask you to attach an earlier ECG. When a message could mean several things, it may first ask which one you mean.</li>
       </ol>
+
+      <h3>Supported diagnoses</h3>
+      <p>The analysis program explicitly supports these diagnoses:</p>
+      <ul class="plain">
+        <li><strong>Rhythm:</strong> atrial fibrillation, atrial flutter, premature atrial complexes and premature ventricular complexes</li>
+        <li><strong>AV conduction:</strong> first-, second- and third-degree AV block</li>
+        <li><strong>Intraventricular conduction:</strong> complete left bundle branch block, complete and incomplete right bundle branch block, and left anterior and left posterior fascicular block</li>
+        <li><strong>Hypertrophy:</strong> left and right ventricular hypertrophy</li>
+        <li><strong>Infarction:</strong> anterior, inferior and lateral myocardial infarction</li>
+        <li><strong>Ischemia:</strong> anterior, inferior and lateral ischemia</li>
+      </ul>
+      <p style="margin-top:14px">For other diagnoses, the agent reasons from the measured ECG features, and its answers may be less accurate, so please keep this in mind.</p>
 
       <h3>What this means for the answers</h3>
       <p>The answers are only as good as the measurements. On a noisy or unusual recording, a misplaced wave onset or offset can lead to a wrong answer. That is why the agent can show its evidence: ask to see it, and the marks sit exactly at the measured positions, so you can check them against the ECG.</p>
@@ -671,6 +718,7 @@
       <div class="notice">
         <ul>
           <li>This is a research demo. It is not a medical device and must not be used to diagnose or treat patients. Its answers can be wrong.</li>
+          <li>For diagnoses other than those the analysis program explicitly supports (see <a href="#how">How it works</a>), the agent reasons from the measured ECG features, so its answers may be less accurate.</li>
           <li>Do not upload, attach or type anything that could identify a patient, and upload only recordings you are allowed to share outside your institution. A WFDB header can hold patient details in its comment lines, so check it before uploading.</li>
         </ul>
       </div>
@@ -681,12 +729,14 @@
         <li>If the demo does not open on a hospital network, try another network.</li>
         <li>The 12-lead tracing is easier to read on a larger screen, and uploading a recording is easier from a computer.</li>
         <li>The demo is available in English and Korean. It starts in Korean when your browser's first language is Korean, and you can switch the language in Settings, under General.</li>
+        <li>Two switches sit next to the message box. <strong>Clarifying questions</strong> lets the agent ask you a question below its answer, or ask which of a few things you mean; it is on by default, and you can turn it off if you only want answers. <strong>Deep thinking</strong> has the agent take more time over each answer; it is off by default.</li>
       </ul>
 
       <h3>What you can attach</h3>
       <ul class="plain">
-        <li>One of 6,188 sample ECGs from two public research datasets, PTB-XL and MIMIC-IV-ECG. They are listed by ID, without their diagnoses.</li>
+        <li>One of 6,188 sample ECGs from two public research datasets, PTB-XL and MIMIC-IV-ECG. They are listed by ID, without their diagnoses. Rest the pointer on an ID, or tap it, to see a preview of the ECG before you attach it.</li>
         <li>Your own 12-lead recording in WFDB format, a <code>.hea</code> header file and a <code>.dat</code> signal file. You confirm its sampling rate and lead order when you attach it.</li>
+        <li>A chat can hold up to four ECGs, attached one per message. Ask about one of them or compare them, such as a recording from today with one from last week. A temporary chat holds one ECG.</li>
         <li>Photos, PDFs, scanned paper ECGs, files exported from ECG machines in other formats (such as XML) and single-lead recordings cannot be read as ECGs.</li>
         <li>If you know the patient has a pacemaker, turn on pacemaker detection when you attach the ECG. It looks for ventricular pacing spikes only and can make mistakes, so it is off by default. When it finds them, diagnostic statements that cannot be read from paced beats, such as bundle branch block, ventricular hypertrophy, infarction or ischemia, are not assessed for that recording.</li>
         <li>A document, such as a PDF, can be attached to a question. From then on, for each question in that chat, the parts of the document that match the question are used as reference material for the answer.</li>

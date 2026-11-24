@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>ECG Reasoning Agent</title>
+  <meta name="description" content="12유도 심전도에 관한 질문에 답하고, 요청하면 답의 근거가 된 파형과 간격을 심전도 위에 표시하는 에이전트입니다. 연구용 라이브 데모입니다.">
+  <link rel="canonical" href="https://jwoo5.github.io/ecg-reasoning-agent/ko/">
+  <link rel="alternate" hreflang="en" href="https://jwoo5.github.io/ecg-reasoning-agent/">
+  <link rel="alternate" hreflang="ko" href="https://jwoo5.github.io/ecg-reasoning-agent/ko/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="ECG Reasoning Agent">
+  <meta property="og:description" content="12유도 심전도에 관해 에이전트에게 묻고, 답의 근거를 심전도 위에 표시하게 해 보세요. 연구용 라이브 데모입니다.">
+  <meta property="og:url" content="https://jwoo5.github.io/ecg-reasoning-agent/ko/">
+  <link rel="icon" media="(prefers-color-scheme:dark)" href="../../assets/img/favicon-dark.png" type="image/png">
+  <link rel="icon" media="(prefers-color-scheme:light)" href="../../assets/img/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,500&family=Hahmlet:wght@400;500;600&display=swap">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #4a4a4a;
+      --heading: #043361;
+      --muted: #6b6b6b;
+      --link: #0b62a4;
+      --card: #f6f7f9;
+      --border: #e3e6ea;
+      --line: #7d8899;
+      --primary-bg: #043361;
+      --primary-text: #ffffff;
+      --notice-bg: #fff8e6;
+      --notice-border: #e0a526;
+      --paper: #fffdfd;
+      --grid-minor: #f9e4e4;
+      --grid-major: #f0c6c6;
+      --trace: #2b2f3a;
+      --mark-fill: rgba(224, 165, 38, 0.22);
+      --mark-line: #c98d14;
+      --chosen: rgba(4, 51, 97, 0.07);
+      --evidence: #b07a0e;
+      --overlay-bg: rgba(16, 19, 26, 0.6);
+      --overlay-fg: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #20212b;
+        --text: #dadbdf;
+        --heading: #eeeff0;
+        --muted: #a9abb3;
+        --link: #3eb7f0;
+        --card: #292a36;
+        --border: #3a3c4a;
+        --line: #6d7385;
+        --primary-bg: #3eb7f0;
+        --primary-text: #10131a;
+        --notice-bg: #33301f;
+        --notice-border: #c9952a;
+        --paper: #24252f;
+        --grid-minor: rgba(255, 128, 128, 0.07);
+        --grid-major: rgba(255, 128, 128, 0.16);
+        --trace: #e4e5e9;
+        --mark-fill: rgba(240, 185, 70, 0.2);
+        --mark-line: #e9b44c;
+        --chosen: rgba(238, 239, 240, 0.1);
+        --evidence: #e9b44c;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      container-type: inline-size;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 18px/1.7 "Crimson Pro", "Hahmlet", Georgia, serif;
+      font-size-adjust: cap-height 0.66;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+    main {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 48px 20px 64px;
+    }
+    a {
+      color: var(--link);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.15em;
+    }
+    a:focus-visible, button:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+    :focus:not(:focus-visible) { outline: none; }
+    code { color: inherit; font-size: 0.9em; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    /* Header and the section buttons */
+    header { text-align: center; }
+    h1 {
+      margin: 0 0 8px;
+      color: var(--heading);
+      font-size: 2.6rem;
+      font-weight: 600;
+      line-height: 1.15;
+    }
+    .lead { margin: 0 auto 6px; max-width: 640px; font-size: 1.2rem; }
+    .byline { margin: 0 0 24px; color: var(--muted); }
+    .hint { margin: 0 auto; max-width: 600px; color: var(--muted); font-size: 0.95rem; }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin: 0 0 14px;
+    }
+    .tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--heading);
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .tab:hover { border-color: var(--link); }
+    .tab[aria-current] {
+      border-color: var(--heading);
+      box-shadow: inset 0 0 0 1px var(--heading);
+      font-weight: 600;
+    }
+    .tab.demo {
+      background: var(--primary-bg);
+      border-color: var(--primary-bg);
+      color: var(--primary-text);
+      font-weight: 600;
+    }
+    .tab.demo:hover { filter: brightness(1.1); }
+    .tab.demo svg { width: 0.85em; height: 0.85em; }
+
+    /* Language switch: the page's two languages, the current one filled */
+    .lang-switch {
+      display: flex;
+      justify-content: flex-end;
+      margin: -28px 0 14px;
+    }
+    .lang-switch-group {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--card);
+      font-size: 0.9rem;
+      line-height: 1;
+    }
+    .lang-switch a {
+      padding: 6px 14px;
+      color: var(--heading);
+      text-decoration: none;
+    }
+    .lang-switch a:hover { background: var(--chosen); }
+    .lang-switch a[aria-current] {
+      background: var(--primary-bg);
+      color: var(--primary-text);
+      font-weight: 600;
+    }
+    @media (max-width: 600px) { .lang-switch { margin: -16px 0 12px; } }
+
+    /* Sections */
+    .panel { padding-top: 12px; }
+    h2 {
+      margin: 30px 0 14px;
+      color: var(--heading);
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+    h3 {
+      margin: 30px 0 8px;
+      color: var(--heading);
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    p { margin: 0 0 14px; }
+    .panel p, .panel > ul, .panel > ol, .prose { max-width: 36em; }
+    .plain { margin: 0; padding-left: 1.2em; }
+    .plain li { margin-bottom: 6px; }
+    .steps q { font-style: italic; }
+
+    .notice {
+      margin: 0 0 8px;
+      padding: 16px 20px 16px 22px;
+      background: var(--notice-bg);
+      border-left: 4px solid var(--notice-border);
+      border-radius: 6px;
+    }
+    .notice ul { margin: 0; padding-left: 1.1em; }
+    .notice li { margin-bottom: 8px; }
+    .notice li:last-child { margin-bottom: 0; }
+
+    /* Home: the feature clips, shown on ECG paper */
+    .player { margin: 22px 0 6px; }
+    .stage {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(var(--grid-major) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+        linear-gradient(var(--grid-minor) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+      background-size: 40px 40px, 40px 40px, 8px 8px, 8px 8px;
+      background-position: -1px -1px;
+    }
+    .stage video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: var(--card);
+    }
+    .placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 6px;
+      padding: 24px;
+      text-align: center;
+    }
+    .placeholder svg { width: min(100%, 560px); height: auto; margin-bottom: 8px; }
+    .trace { fill: none; stroke: var(--trace); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .mark { fill: var(--mark-fill); stroke: var(--mark-line); stroke-width: 1.5; }
+    .placeholder-title { margin: 0; color: var(--heading); font-size: 1.35rem; font-weight: 600; }
+    .placeholder-note { margin: 0; color: var(--text); font-size: 0.95rem; }
+
+    .player-bar { margin-top: 14px; }
+    .clips {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+      gap: 10px 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .clip {
+      display: block;
+      width: 100%;
+      padding: 0 0 2px;
+      border: 0;
+      background: none;
+      color: var(--muted);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .clip:hover { color: var(--heading); }
+    .clip:disabled { color: var(--heading); cursor: default; }
+    .clip[aria-current="true"] { color: var(--heading); font-weight: 600; }
+    .clip-bar {
+      display: block;
+      height: 3px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      border-radius: 2px;
+      background: var(--border);
+    }
+    .clip-bar span {
+      display: block;
+      height: 100%;
+      background: var(--heading);
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+    .clip-title { display: block; line-height: 1.25; }
+    .clip-text { margin: 4px 0 0; font-size: 0.95rem; }
+    .clip-text q { font-style: italic; }
+    .clip-detail { display: grid; margin: 14px 0 0; }
+    .clip-detail .clip-text {
+      grid-area: 1 / 1;
+      margin: 0;
+      padding: 2px 0 2px 14px;
+      border-left: 3px solid var(--line);
+      font-size: 1rem;
+      visibility: hidden;
+    }
+    .clip-detail .clip-text.active { visibility: visible; }
+    html:not(.js) .clip-bar,
+    html:not(.js) .clip-detail { display: none; }
+
+    /* A screen that pauses and plays when clicked, with a badge in its corner:
+       shown while paused, and on hover or focus while playing. */
+    .overlay-toggle {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      width: 100%;
+      padding: 12px;
+      border: 0;
+      background: none;
+      cursor: pointer;
+    }
+    .overlay-toggle:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
+    .toggle-icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--overlay-bg);
+      color: var(--overlay-fg);
+      opacity: 0;
+    }
+    .toggle-icon svg { width: 18px; height: 18px; fill: currentColor; }
+    .overlay-toggle[data-state="paused"] .toggle-icon,
+    .overlay-toggle:hover .toggle-icon,
+    .overlay-toggle:focus-visible .toggle-icon { opacity: 1; }
+    .overlay-toggle[data-state="paused"] .icon-pause,
+    .overlay-toggle[data-state="playing"] .icon-play { display: none; }
+
+    /* How it works: the figure of one question, drawn as inline SVG */
+    .hw { margin: 26px 0 24px; }
+    .hw-scroll { overflow-x: auto; }
+    .hw-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+    .hw-stage { position: relative; min-width: 960px; }
+    .hw-fig { display: block; width: 100%; height: auto; }
+    .hw-swipe { display: none; margin: 10px 0 0; color: var(--muted); font-size: 0.95rem; }
+    @media (min-width: 860px) {
+      .hw {
+        width: min(1160px, calc(100vw - 32px));
+        margin-left: calc(50% - min(580px, 50vw - 16px));
+        width: min(1160px, calc(100cqw - 32px));
+        margin-left: calc(50% - min(580px, 50cqw - 16px));
+      }
+    }
+    @media (max-width: 991.98px) { .hw-swipe { display: block; } }
+    @container (width < 992px) { .hw-swipe { display: block; } }
+    .hw-fig text { font-family: "Crimson Pro", "Hahmlet", "Times New Roman", Times, "Liberation Serif", Tinos, serif; }
+    .hw-paper { fill: var(--paper); }
+    .hw-grid-minor { fill: none; stroke: var(--grid-minor); stroke-width: 1; }
+    .hw-grid-major { fill: none; stroke: var(--grid-major); stroke-width: 1; }
+    .hw-box { fill: var(--bg); stroke: var(--heading); --sw: 1.25px; stroke-width: var(--sw); }
+    .hw-badge { fill: var(--heading); }
+    .hw-bubble { fill: var(--card); stroke: var(--border); --sw: 1px; stroke-width: var(--sw); }
+    .hw-card { fill: none; stroke: var(--line); stroke-width: 1.25; }
+    .hw-conn { fill: none; stroke: var(--line); --sw: 1.5px; stroke-width: var(--sw); }
+    .hw-dash { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .hw-head { fill: var(--line); }
+    .hw-read { fill: none; stroke: var(--heading); stroke-width: 2; }
+    .hw-pick { fill: none; stroke: var(--heading); stroke-width: 1.5; stroke-dasharray: 4 3; }
+    .hw-pick-seg { fill: none; stroke: var(--heading); stroke-width: 1.5; }
+    .hw-read-head { fill: var(--heading); }
+    .hw-ev { fill: none; stroke: var(--evidence); stroke-width: 2; }
+    .hw-ev-head { fill: var(--evidence); }
+    .hw-mark { fill: var(--mark-fill); stroke: var(--evidence); stroke-width: 1.5; }
+    .hw-trace { fill: none; stroke: var(--trace); stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+    .hw-prog { fill: var(--card); stroke: var(--line); stroke-width: 1.25; }
+    .hw-results { fill: var(--bg); stroke: var(--border); stroke-width: 1; }
+    .hw-rule { fill: none; stroke: var(--border); stroke-width: 1; }
+    .hw-chip { fill: var(--card); stroke: var(--border); stroke-width: 1; }
+    .hw-chip-on { fill: var(--chosen); stroke: var(--heading); stroke-width: 1.25; }
+    .hw-group { fill: none; stroke: var(--heading); stroke-width: 1.25; stroke-dasharray: 4 3; }
+    .hw-edge { fill: none; stroke: var(--grid-major); stroke-width: 1.5; }
+    .hw-title { font-size: 16px; font-weight: 600; fill: var(--heading); }
+    .hw-ex { font-size: 14px; font-style: italic; fill: var(--muted); }
+    .hw-badge-t { font-size: 13px; font-weight: 600; fill: var(--bg); }
+    .hw-say { font-size: 15px; fill: var(--text); }
+    .hw-say-h { font-size: 13.5px; font-weight: 600; fill: var(--heading); }
+    .hw-label { font-size: 13.5px; font-style: italic; fill: var(--muted); }
+    .hw-prog-t { font-size: 16px; font-weight: 600; fill: var(--text); }
+    .hw-tier-t { font-size: 13.5px; font-weight: 600; fill: var(--text); }
+    .hw-tier-s { font-size: 13px; font-style: italic; fill: var(--muted); }
+    .hw-chip-t { font-size: 13px; fill: var(--text); }
+    .hw-chip-on-t { font-size: 13px; font-weight: 600; fill: var(--heading); }
+    .hw-more { font-size: 13px; font-style: italic; fill: var(--muted); }
+    .hw-cap { font-size: 13.5px; fill: var(--text); }
+    .hw-lead { font-size: 11.5px; fill: var(--muted); }
+    @media (prefers-reduced-motion: no-preference) {
+      .hw.play .hw-pulse { animation: hw-pulse 1.2s ease-out var(--d) both; }
+      .hw.play .hw-box.hw-pulse, .hw.play .hw-bubble.hw-pulse { animation: hw-pulse 1.2s ease-out var(--d) both, hw-tint 1.2s ease-out var(--d) both; }
+      .hw.play .hw-draw { stroke-dasharray: 1; animation: hw-draw 0.7s ease-in-out var(--d) both; }
+      .hw.play .hw-wake { animation: hw-wake 0.8s ease-out var(--d) both; }
+      .hw.play .hw-wake-box { animation: hw-wake 0.8s ease-out var(--d) both, hw-pulse 1.2s ease-out var(--d) both, hw-tint 1.2s ease-out var(--d) both; }
+      .hw.play .hw-pop { animation: hw-appear 0.25s ease-out var(--d) both; }
+      .hw.play .hw-appear { animation: hw-appear 0.8s ease-out var(--d) both; }
+      .hw.play .hw-pick-seg.hw-appear { animation-duration: 0.12s; }
+      .hw.play .hw-choose { animation: hw-choose 0.5s ease-out var(--d) both; }
+      .hw.play .hw-choose-t { animation: hw-choose-t 0.5s ease-out var(--d) both; }
+      .hw.play .hw-type { animation: hw-type var(--t) linear var(--d) both; }
+      .hw.play .hw-grow { transform-box: fill-box; transform-origin: 0 50%; animation: hw-grow 0.6s ease-out var(--d) both; }
+    }
+    @keyframes hw-pulse { 35% { stroke-width: calc(var(--sw) + 2.5px); } }
+    @keyframes hw-tint { 35% { fill: var(--chosen); } }
+    @keyframes hw-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+    @keyframes hw-appear { from { opacity: 0; } }
+    @keyframes hw-wake { from { opacity: 0.28; } }
+    @keyframes hw-choose { from { fill: var(--card); stroke: var(--border); stroke-width: 1px; } }
+    @keyframes hw-choose-t { from { fill: var(--text); } }
+    /* A line is written left to right; where clip-path is not supported it appears at once. */
+    @keyframes hw-type {
+      0% { opacity: 0; -webkit-clip-path: inset(-4px 100% -4px -4px); clip-path: inset(-4px 100% -4px -4px); }
+      1% { opacity: 1; }
+      100% { opacity: 1; -webkit-clip-path: inset(-4px -4px -4px -4px); clip-path: inset(-4px -4px -4px -4px); }
+    }
+    @keyframes hw-grow { from { transform: scaleX(0); } }
+    .steps { margin: 0; padding-left: 1.3em; }
+    .steps li { margin-bottom: 10px; }
+    .steps strong { color: var(--heading); font-weight: 600; }
+
+    /* Contact */
+    .contact { margin: 0; }
+    .contact dt { color: var(--heading); font-weight: 600; }
+    .contact dd { margin: 0 0 14px; }
+
+    footer {
+      margin-top: 52px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    footer p { margin: 0 0 6px; }
+    footer a { white-space: nowrap; }
+
+    /* Crimson Pro has short capitals beside Hangul, so the body sizes each font to
+       one cap height (above); the title, Latin only, keeps the English page's size. */
+    h1 { font-size-adjust: none; }
+    /* Hangul has no italic face, so the text set in italics on the English page
+       stays upright here; its quotation marks and muted color set it apart. */
+    .steps q, .clip-text q, .hw-ex, .hw-label, .hw-tier-s, .hw-more { font-style: normal; }
+    .clip-lang { margin: 12px 0 0; color: var(--muted); font-size: 0.95rem; }
+
+    @media (max-width: 600px) {
+      body { font-size: 17px; }
+      main { padding: 32px 16px 48px; }
+      h1 { font-size: 2.1rem; }
+      .lead { font-size: 1.1rem; }
+      .tabs { gap: 8px; }
+      .tab { padding: 7px 14px; }
+    }
+    @media (forced-colors: active) {
+      .tab[aria-current] { border-width: 2px; text-decoration: underline; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .clip-bar span { transition: transform 0.25s linear; }
+      .toggle-icon { transition: opacity 0.2s; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <nav class="lang-switch" aria-label="언어"><span class="lang-switch-group"><a href="../" hreflang="en" lang="en">English</a><a href="./" aria-current="page" lang="ko">한국어</a></span></nav>
+    <header>
+      <h1>ECG Reasoning Agent</h1>
+      <p class="lead">12유도 심전도에 관해 평소 쓰는 말로 질문해 보세요. 근거를 보여 달라고 하면 에이전트가 답변의 바탕이 된 파형과 간격을 심전도 위에 표시합니다.</p>
+      <p class="byline"><a href="https://jwoo5.github.io/">Jungwoo Oh</a>, KAIST AI</p>
+      <nav class="tabs" aria-label="페이지 섹션">
+        <a class="tab" href="#home" data-tab="home">홈</a>
+        <a class="tab" href="#how" data-tab="how">작동 방식</a>
+        <a class="tab" href="#before" data-tab="before">사용 전 안내</a>
+        <a class="tab demo" href="https://amiyah-valueless-ione.ngrok-free.dev/" target="_blank" rel="noopener">라이브 데모 체험하기<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h5v5M14 2 7.5 8.5M12 9.5V14H2V4h4.5"/></svg><span class="visually-hidden"> (새 탭에서 열림)</span></a>
+        <a class="tab" href="#contact" data-tab="contact">문의</a>
+      </nav>
+      <p class="hint">연구용 데모이며 임상 용도로 쓸 수 없습니다. 환자를 식별할 수 있는 정보는 입력하지 마세요.</p>
+    </header>
+
+    <section id="home" class="panel" aria-labelledby="home-title">
+      <h2 id="home-title" tabindex="-1">이 에이전트가 하는 일</h2>
+      <p>12유도 심전도(공개 샘플 중 하나 또는 갖고 있는 기록)를 첨부하고 채팅으로 질문하세요. 최대 네 개까지 첨부해 서로 비교할 수도 있습니다. 먼저 심전도 분석 프로그램이 각 기록을 분석하고, 에이전트는 이 프로그램이 낸 측정값, 소견, 진단명을 바탕으로 답합니다. 근거를 보여 달라고 하면 답변의 바탕이 된 파형과 간격을 표시하므로, 답변을 심전도와 직접 대조해 확인할 수 있습니다. 사용자의 대답에 따라 판독이나 조치가 달라질 때는 답변 아래에 질문을 하나 하고, 눌러서 고를 수 있는 대답을 함께 보여 주기도 합니다.</p>
+      <p>연구용 프로토타입입니다. 저희는 어시스턴트가 심전도 판독을 설명하고 그 근거를 보여 주어, 임상의가 답을 그대로 믿는 대신 직접 확인할 수 있는지를 연구하고 있습니다. 특히 임상의 여러분께서 사용해 보시고 틀리거나, 불분명하거나, 도움이 되지 않는 부분을 알려 주시면 감사하겠습니다(<a href="#contact">문의</a> 참고).</p>
+
+      <div class="player" data-player>
+        <div class="stage">
+          <video muted playsinline preload="metadata" aria-describedby="clip-detail" hidden></video>
+          <div class="placeholder">
+            <svg viewBox="0 0 600 170" aria-hidden="true">
+              <rect class="mark" x="292" y="24" width="40" height="132" rx="3"/>
+              <path class="trace" d="M0 118H40Q52 104 64 118H82L88 126 98 36 108 146 114 118H140Q166 88 192 118H240Q252 104 264 118H282L288 126 298 36 308 146 314 118H340Q366 88 392 118H440Q452 104 464 118H482L488 126 498 36 508 146 514 118H540Q566 88 592 118H600"/>
+            </svg>
+            <p class="placeholder-title">추론 과정 확인하기</p>
+            <p class="placeholder-note">영상 준비 중</p>
+          </div>
+          <button class="overlay-toggle" type="button" hidden><span class="toggle-icon" aria-hidden="true"><svg class="icon-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg><svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></span></button>
+        </div>
+        <div class="player-bar">
+          <!-- data-src and data-poster name each clip's video and still image, such as ../media/ask.mp4 and ../media/ask.jpg; a clip without data-src shows the placeholder above. -->
+          <ul class="clips">
+            <li>
+              <button class="clip" type="button" data-src="../media/clip1_reasoning.mp4" data-poster="../media/clip1_reasoning.jpg" aria-describedby="clip-text-0" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">추론 과정 확인하기</span>
+              </button>
+              <p class="clip-text" id="clip-text-0"><q>오래된 하벽 심근경색 소견이 있나요? 왜 그런가요?</q>처럼 특정 진단이 맞는지 물어보세요. 답변이 근거로 삼은 소견과 측정값을 밝히므로, 에이전트가 어떻게 그 답에 이르렀는지 따라가 볼 수 있습니다.</p>
+            </li>
+            <li>
+              <button class="clip" type="button" data-src="../media/clip2_measurements.mp4" data-poster="../media/clip2_measurements.jpg" aria-describedby="clip-text-1" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">측정값 확인하기</span>
+              </button>
+              <p class="clip-text" id="clip-text-1"><q>PR, QRS, QT 간격은 각각 얼마인가요?</q>처럼 수치를 물어보세요. 답변이 측정값을 알려 주므로, 직접 심전도를 판독한 결과와 비교해 볼 수 있습니다.</p>
+            </li>
+            <li>
+              <button class="clip" type="button" data-src="../media/clip3_evidence.mp4" data-poster="../media/clip3_evidence.jpg" aria-describedby="clip-text-2" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">근거 보기</span>
+              </button>
+              <p class="clip-text" id="clip-text-2"><q>QT 간격이 연장됐나요? 어디서 측정했는지 보여 주세요.</q>처럼 근거를 보여 달라고 해 보세요. 답변 아래 12유도 심전도에 각 QT 간격이 측정된 위치대로 표시됩니다. QRS 축처럼 심전도 위에 위치가 없는 결과는 표시 없이 글로만 알려 줍니다.</p>
+            </li>
+            <li>
+              <button class="clip" type="button" data-src="../media/clip5_followup.mp4" data-poster="../media/clip5_followup.jpg" aria-describedby="clip-text-3" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">이어서 질문하기</span>
+              </button>
+              <p class="clip-text" id="clip-text-3">답변을 받은 뒤 같은 채팅에서 <q>그건 정상인가요?</q>처럼 이어서 질문해 보세요. 답변은 지금까지의 대화를 바탕으로 합니다. 사용자의 대답에 따라 판독이나 조치가 달라질 때는 에이전트가 답변 아래에 질문을 하나 하고, 눌러서 고를 수 있는 대답을 함께 보여 주기도 합니다.</p>
+            </li>
+            <li>
+              <button class="clip" type="button" data-src="../media/clip6_compare.mp4" data-poster="../media/clip6_compare.jpg" aria-describedby="clip-text-4" disabled>
+                <span class="clip-bar"><span></span></span>
+                <span class="clip-title">심전도 비교하기</span>
+              </button>
+              <p class="clip-text" id="clip-text-4">같은 채팅에 다른 심전도를 첨부하고 <q>첫 번째 심전도와 비교해 무엇이 달라졌나요?</q>처럼 물어보세요. 답변은 각 값이 어느 심전도에서 나왔는지 밝힙니다. 근거를 보여 달라고 하면 표시가 각 심전도의 파형 위에 따로 그려집니다.</p>
+            </li>
+          </ul>
+        </div>
+        <div class="clip-detail" id="clip-detail"></div>
+      </div>
+      <p class="clip-lang">영상은 영어 화면에서 녹화했습니다. 데모에서는 한국어로도 질문하고 답변을 받을 수 있습니다.</p>
+
+      <p style="margin-top:14px">답변 하나에 30초 정도, 때로는 그 이상 걸리며, 답변 위에 에이전트가 지금 어느 단계에 있는지 한 줄로 표시됩니다.</p>
+    </section>
+
+    <section id="how" class="panel" aria-labelledby="how-title">
+      <h2 id="how-title" tabindex="-1">작동 방식</h2>
+      <div class="hw">
+        <div class="hw-scroll" role="group" aria-label="작동 방식 그림">
+          <div class="hw-stage">
+            <svg class="hw-fig hw-wide" viewBox="0 0 1160 584" role="img" aria-label="에이전트가 예시 질문 하나에 답하는 과정을 보여 주는 그림입니다. 예시 질문: QT 간격이 연장됐나요? 어디서 측정했는지 보여 주세요. 심전도 분석 프로그램이 이 심전도의 측정값, 소견, 진단명을 냅니다. 1단계, 답하려면 심전도 분석이 필요한가? 예, 이 심전도에 관한 질문이기 때문입니다. 분석이 필요 없는 질문은 분석 결과 없이 대화, 첨부한 문서, 의학 지식으로 답합니다. 2단계, 읽을 결과 고르기: QT 간격, QTc, QRS 시작점, T파 끝점. 3단계, 표시할 곳 정하기: QRS 시작점부터 T파 끝점까지의 각 QT 간격. 4단계, 측정값과 의학 지식으로 답변 작성하기. 언어 모델은 고른 결과를 텍스트로 받아 답하며, 심전도 자체는 보지 않습니다. 답변: QTc는 489 ms로 연장되어 있습니다. 답변과 함께 심전도가 나오고, 분석 프로그램이 측정한 위치에 각 QT 간격이 표시됩니다.">
+            <defs>
+            <pattern id="hw-grid-w" y="252" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path class="hw-grid-minor" d="M8.5 0V40M16.5 0V40M24.5 0V40M32.5 0V40M0 8.5H40M0 16.5H40M0 24.5H40M0 32.5H40"/>
+            <path class="hw-grid-major" d="M0.5 0V40M0 0.5H40"/>
+            </pattern>
+            </defs>
+            <rect class="hw-paper" x="0" y="252" width="1160" height="332"/>
+            <rect x="0" y="252" width="1160" height="332" fill="url(#hw-grid-w)"/>
+            <path class="hw-edge" d="M0 252L1160 252"/>
+            <path class="hw-bubble hw-pulse" style="--d:0s" d="M26 92L174 92Q188 92 188 106L188 162Q188 176 174 176L48 176L28 188L32 176L26 176Q12 176 12 162L12 106Q12 92 26 92Z"/>
+            <text class="hw-say" x="26" y="118"><tspan x="26">QT 간격이 연장됐나요?</tspan><tspan x="26" dy="20">어디서 측정했는지</tspan><tspan x="26" dy="20">보여 주세요.</tspan></text>
+            <rect class="hw-box hw-wake-box" style="--d:1.2s" x="228" y="78" width="150" height="112" rx="10"/>
+            <circle class="hw-badge hw-wake" style="--d:1.2s" cx="252" cy="78" r="13"/>
+            <text class="hw-badge-t hw-wake" style="--d:1.2s" x="252" y="82.5" text-anchor="middle">1</text>
+            <text class="hw-title hw-wake" style="--d:1.2s" x="242" y="114"><tspan x="242">답하려면 심전도</tspan><tspan x="242" dy="20">분석이 필요한가?</tspan></text>
+            <text class="hw-ex hw-wake" style="--d:1.2s" x="242" y="160"><tspan x="242">예, 이 심전도에</tspan><tspan x="242" dy="17">관한 질문이므로</tspan></text>
+            <rect class="hw-box hw-wake-box" style="--d:2.6s" x="406" y="78" width="150" height="112" rx="10"/>
+            <circle class="hw-badge hw-wake" style="--d:2.6s" cx="430" cy="78" r="13"/>
+            <text class="hw-badge-t hw-wake" style="--d:2.6s" x="430" y="82.5" text-anchor="middle">2</text>
+            <text class="hw-title hw-wake" style="--d:2.6s" x="420" y="114"><tspan x="420">읽을 결과</tspan><tspan x="420" dy="20">고르기</tspan></text>
+            <text class="hw-ex hw-wake" style="--d:2.6s" x="420" y="160"><tspan x="420">QT, QTc와</tspan><tspan x="420" dy="17">각 QT의 위치</tspan></text>
+            <rect class="hw-box hw-wake-box" style="--d:6.2s" x="584" y="78" width="150" height="112" rx="10"/>
+            <circle class="hw-badge hw-wake" style="--d:6.2s" cx="608" cy="78" r="13"/>
+            <text class="hw-badge-t hw-wake" style="--d:6.2s" x="608" y="82.5" text-anchor="middle">3</text>
+            <text class="hw-title hw-wake" style="--d:6.2s" x="598" y="114"><tspan x="598">표시할 곳</tspan><tspan x="598" dy="20">정하기</tspan></text>
+            <text class="hw-ex hw-wake" style="--d:6.2s" x="598" y="160"><tspan x="598">각 QT 간격,</tspan><tspan x="598" dy="17">QRS 시작~T파 끝</tspan></text>
+            <rect class="hw-box hw-wake-box" style="--d:8.4s" x="762" y="78" width="150" height="112" rx="10"/>
+            <circle class="hw-badge hw-wake" style="--d:8.4s" cx="786" cy="78" r="13"/>
+            <text class="hw-badge-t hw-wake" style="--d:8.4s" x="786" y="82.5" text-anchor="middle">4</text>
+            <text class="hw-title hw-wake" style="--d:8.4s" x="776" y="114"><tspan x="776">답변</tspan><tspan x="776" dy="20">작성하기</tspan></text>
+            <text class="hw-ex hw-wake" style="--d:8.4s" x="776" y="160"><tspan x="776">측정값과</tspan><tspan x="776" dy="17">의학 지식으로</tspan></text>
+            <path class="hw-conn hw-draw" style="--d:0.6s" pathLength="1" d="M190 134L218.5 134"/>
+            <path class="hw-head hw-pop" style="--d:1.2s" d="M226 134L218 138.4L218 129.6Z"/>
+            <path class="hw-conn hw-draw" style="--d:2.0s" pathLength="1" d="M380 134L396.5 134"/>
+            <path class="hw-head hw-pop" style="--d:2.6s" d="M404 134L396 138.4L396 129.6Z"/>
+            <path class="hw-conn hw-draw" style="--d:5.4s" pathLength="1" d="M558 134L574.5 134"/>
+            <path class="hw-head hw-pop" style="--d:6.0s" d="M582 134L574 138.4L574 129.6Z"/>
+            <path class="hw-conn hw-draw" style="--d:7.8s" pathLength="1" d="M736 134L752.5 134"/>
+            <path class="hw-head hw-pop" style="--d:8.4s" d="M760 134L752 138.4L752 129.6Z"/>
+            <text class="hw-label hw-appear" style="--d:2.0s" x="392" y="126" text-anchor="middle">예</text>
+            <path class="hw-dash hw-wake" style="--d:8.4s" d="M303 76L303 56Q303 44 315 44L825 44Q837 44 837 56L837 62"/>
+            <path class="hw-dash hw-wake" style="--d:8.4s" d="M837 61L837 67.5"/>
+            <path class="hw-head hw-wake" style="--d:8.4s" d="M837 75L832.6 67L841.4 67Z"/>
+            <text class="hw-label hw-wake" style="--d:8.4s" x="570" y="34" text-anchor="middle">아니요: 분석 결과 없이 대화와 의학 지식으로 답합니다</text>
+            <text class="hw-lead" x="14" y="281">I</text>
+            <text class="hw-lead" x="14" y="307">II</text>
+            <text class="hw-lead" x="14" y="333">V2</text>
+            <path class="hw-trace" d="M32 290L36.6 290Q41.2 284.8 45.9 290L52.8 290L54.7 292.3L57.4 271L60.1 293L62.4 290L68.2 289.2Q75.9 278 83.6 290L109 290L113.6 290Q118.2 284.8 122.9 290L129.8 290L131.7 292.3L134.4 271L137.1 293L139.4 290L145.2 289.2Q152.9 278 160.6 290L186 290"/>
+            <path class="hw-trace" d="M32 316L36.6 316Q41.2 310 45.9 316L52.8 316L54.7 317.6L57.4 303L60.1 318.5L62.4 316L68.2 315.5Q75.9 306 83.6 316L109 316L113.6 316Q118.2 310 122.9 316L129.8 316L131.7 317.6L134.4 303L137.1 318.5L139.4 316L145.2 315.5Q152.9 306 160.6 316L186 316"/>
+            <path class="hw-trace" d="M32 342L36.6 342Q41.2 338.8 45.9 342L52.8 342L54.7 342.6L57.4 337L60.1 357L62.4 342L68.2 341.8Q75.9 329 83.6 342L109 342L113.6 342Q118.2 338.8 122.9 342L129.8 342L131.7 342.6L134.4 337L137.1 357L139.4 342L145.2 341.8Q152.9 329 160.6 342L186 342"/>
+            <text class="hw-cap" x="100" y="376" text-anchor="middle">첨부한 12유도 심전도</text>
+            <path class="hw-conn" d="M100 383L100 388.5"/>
+            <path class="hw-head" d="M100 396L95.6 388L104.4 388Z"/>
+            <rect class="hw-prog" x="12" y="398" width="176" height="64" rx="8"/>
+            <text class="hw-prog-t" x="26" y="424"><tspan x="26">심전도 분석</tspan><tspan x="26" dy="20">프로그램</tspan></text>
+            <rect class="hw-results" x="228" y="290" width="602" height="274" rx="10"/>
+            <text class="hw-tier-t" x="242" y="328.5">측정값</text>
+            <text class="hw-tier-s" x="242" y="348"><tspan x="242">유도마다, 그리고</tspan><tspan x="242" dy="16">유도 전체에 걸쳐</tspan></text>
+            <rect class="hw-chip-on hw-choose" style="--d:3.9s" x="406" y="312" width="95" height="24" rx="12"/>
+            <text class="hw-chip-on-t hw-choose-t" style="--d:3.9s" x="453.5" y="328.5" text-anchor="middle">QT 간격</text>
+            <rect class="hw-chip-on hw-choose" style="--d:4.1s" x="509" y="312" width="95" height="24" rx="12"/>
+            <text class="hw-chip-on-t hw-choose-t" style="--d:4.1s" x="556.5" y="328.5" text-anchor="middle">QTc</text>
+            <rect class="hw-chip-on hw-choose" style="--d:4.3s" x="612" y="312" width="95" height="24" rx="12"/>
+            <text class="hw-chip-on-t hw-choose-t" style="--d:4.3s" x="659.5" y="328.5" text-anchor="middle">QRS 시작점</text>
+            <rect class="hw-chip-on hw-choose" style="--d:4.5s" x="715" y="312" width="95" height="24" rx="12"/>
+            <text class="hw-chip-on-t hw-choose-t" style="--d:4.5s" x="762.5" y="328.5" text-anchor="middle">T파 끝점</text>
+            <rect class="hw-group hw-appear" style="--d:4.9s" x="400" y="306" width="416" height="36" rx="16"/>
+            <rect class="hw-chip" x="406" y="354" width="80.3" height="24" rx="12"/>
+            <text class="hw-chip-t" x="446.1" y="370.5" text-anchor="middle">RR 간격</text>
+            <rect class="hw-chip" x="494.3" y="354" width="78.9" height="24" rx="12"/>
+            <text class="hw-chip-t" x="533.7" y="370.5" text-anchor="middle">PR 간격</text>
+            <rect class="hw-chip" x="581.2" y="354" width="91.9" height="24" rx="12"/>
+            <text class="hw-chip-t" x="627.1" y="370.5" text-anchor="middle">QRS 폭</text>
+            <text class="hw-more" x="683" y="370.5">등</text>
+            <path class="hw-rule" d="M228 392L830 392"/>
+            <text class="hw-tier-t" x="242" y="422.5">소견</text>
+            <text class="hw-tier-s" x="242" y="442"><tspan x="242">한 유도 또는</tspan><tspan x="242" dy="16">심전도 전체</tspan></text>
+            <rect class="hw-chip" x="406" y="406" width="118.1" height="24" rx="12"/>
+            <text class="hw-chip-t" x="465" y="422.5" text-anchor="middle">V2 유도 ST 상승</text>
+            <rect class="hw-chip" x="532.1" y="406" width="139.7" height="24" rx="12"/>
+            <text class="hw-chip-t" x="602" y="422.5" text-anchor="middle">III 유도 T파 역위</text>
+            <rect class="hw-chip" x="406" y="440" width="167.3" height="24" rx="12"/>
+            <text class="hw-chip-t" x="489.7" y="456.5" text-anchor="middle">aVF 유도 병적 Q파</text>
+            <rect class="hw-chip" x="581.3" y="440" width="117.5" height="24" rx="12"/>
+            <text class="hw-chip-t" x="640" y="456.5" text-anchor="middle">좌축 편위</text>
+            <text class="hw-more" x="708.8" y="456.5">등</text>
+            <path class="hw-rule" d="M228 478L830 478"/>
+            <text class="hw-tier-t" x="242" y="508.5">진단명</text>
+            <rect class="hw-chip" x="406" y="492" width="134.3" height="24" rx="12"/>
+            <text class="hw-chip-t" x="473.2" y="508.5" text-anchor="middle">1도 방실차단</text>
+            <rect class="hw-chip" x="548.3" y="492" width="168" height="24" rx="12"/>
+            <text class="hw-chip-t" x="632.3" y="508.5" text-anchor="middle">좌심실비대</text>
+            <rect class="hw-chip" x="406" y="526" width="113.5" height="24" rx="12"/>
+            <text class="hw-chip-t" x="462.7" y="542.5" text-anchor="middle">하벽 심근경색</text>
+            <rect class="hw-chip" x="527.5" y="526" width="207.7" height="24" rx="12"/>
+            <text class="hw-chip-t" x="631.3" y="542.5" text-anchor="middle">완전 우각차단</text>
+            <text class="hw-more" x="745.2" y="542.5">등</text>
+            <path class="hw-conn" d="M190 430L218.5 430"/>
+            <path class="hw-head" d="M226 430L218 434.4L218 425.6Z"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.1s" d="M481 193L481 197"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.15s" d="M481 200L481 204"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.19s" d="M481 207L481 211"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.24s" d="M481 214L481 218"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.29s" d="M481 221L481 225"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.33s" d="M481 228L481 232"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.38s" d="M481 235L481 239"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.43s" d="M481 242L481 246"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.47s" d="M481 249L481 253"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.52s" d="M481 256L481 260"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.56s" d="M481 263L481 267"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.61s" d="M481 270L481 274"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.66s" d="M481 277L481 281"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.7s" d="M481 284L481 288"/>
+            <path class="hw-pick-seg hw-appear" style="--d:3.75s" d="M481 291L481 295"/>
+            <path class="hw-read-head hw-pop" style="--d:3.8s" d="M481 304L485.4 296L476.6 296Z"/>
+            <text class="hw-label hw-appear" style="--d:3.1s" x="471" y="228" text-anchor="end">결과 고르기</text>
+            <path class="hw-read hw-draw" style="--d:5.6s" pathLength="1" d="M608 305L608 200.5"/>
+            <path class="hw-read-head hw-pop" style="--d:6.2s" d="M608 193L612.4 201L603.6 201Z"/>
+            <text class="hw-label hw-appear" style="--d:5.6s" x="598" y="228" text-anchor="end">고른 결과</text>
+            <path class="hw-ev hw-draw" style="--d:7.0s" pathLength="1" d="M711 193L711 296.5"/>
+            <path class="hw-ev-head hw-pop" style="--d:7.6s" d="M711 304L706.6 296L715.4 296Z"/>
+            <text class="hw-label hw-appear" style="--d:7.0s" x="721" y="228">표시할 위치</text>
+            <path class="hw-conn hw-draw" style="--d:9.0s" pathLength="1" d="M914 134L942.5 134"/>
+            <path class="hw-head hw-pop" style="--d:9.6s" d="M950 134L942 138.4L942 129.6Z"/>
+            <rect class="hw-card hw-wake" style="--d:9.6s" x="952" y="78" width="196" height="308" rx="12"/>
+            <text class="hw-say-h hw-wake" style="--d:9.6s" x="966" y="102">답변</text>
+            <text class="hw-say hw-type" style="--d:10.0s;--t:0.58s" x="966" y="126">QTc는 489 ms로 연장되어</text>
+            <text class="hw-say hw-type" style="--d:10.63s;--t:0.56s" x="966" y="145">있습니다. 각 QT 간격을</text>
+            <text class="hw-say hw-type" style="--d:11.24s;--t:0.54s" x="966" y="164">QRS 시작점부터 T파</text>
+            <text class="hw-say hw-type" style="--d:11.83s;--t:0.64s" x="966" y="183">끝점까지 표시했습니다.</text>
+            <path class="hw-ev hw-draw" style="--d:12.52s" pathLength="1" d="M832 324L942.5 324"/>
+            <path class="hw-ev-head hw-pop" style="--d:13.12s" d="M950 324L942 328.4L942 319.6Z"/>
+            <text class="hw-label hw-appear" style="--d:12.52s" x="891" y="314" text-anchor="middle">심전도에 표시</text>
+            <path class="hw-trace hw-appear" style="--d:13.02s" d="M966 300L969.4 300Q972.7 294.8 976.1 300L981.1 300L982.5 302.3L984.5 281L986.4 303L988.1 300L992.3 299.2Q997.9 288 1003.5 300L1022 300L1025.4 300Q1028.7 294.8 1032.1 300L1037.1 300L1038.5 302.3L1040.5 281L1042.4 303L1044.1 300L1048.3 299.2Q1053.9 288 1059.5 300L1078 300L1081.4 300Q1084.7 294.8 1088.1 300L1093.1 300L1094.5 302.3L1096.5 281L1098.4 303L1100.1 300L1104.3 299.2Q1109.9 288 1115.5 300L1134 300"/>
+            <path class="hw-trace hw-appear" style="--d:13.02s" d="M966 324L969.4 324Q972.7 318 976.1 324L981.1 324L982.5 325.6L984.5 311L986.4 326.5L988.1 324L992.3 323.5Q997.9 314 1003.5 324L1022 324L1025.4 324Q1028.7 318 1032.1 324L1037.1 324L1038.5 325.6L1040.5 311L1042.4 326.5L1044.1 324L1048.3 323.5Q1053.9 314 1059.5 324L1078 324L1081.4 324Q1084.7 318 1088.1 324L1093.1 324L1094.5 325.6L1096.5 311L1098.4 326.5L1100.1 324L1104.3 323.5Q1109.9 314 1115.5 324L1134 324"/>
+            <path class="hw-trace hw-appear" style="--d:13.02s" d="M966 348L969.4 348Q972.7 344.8 976.1 348L981.1 348L982.5 348.6L984.5 343L986.4 363L988.1 348L992.3 347.8Q997.9 335 1003.5 348L1022 348L1025.4 348Q1028.7 344.8 1032.1 348L1037.1 348L1038.5 348.6L1040.5 343L1042.4 363L1044.1 348L1048.3 347.8Q1053.9 335 1059.5 348L1078 348L1081.4 348Q1084.7 344.8 1088.1 348L1093.1 348L1094.5 348.6L1096.5 343L1098.4 363L1100.1 348L1104.3 347.8Q1109.9 335 1115.5 348L1134 348"/>
+            <rect class="hw-mark hw-grow" style="--d:13.42s" x="981.1" y="276" width="22.4" height="90" rx="2"/>
+            <rect class="hw-mark hw-grow" style="--d:13.67s" x="1037.1" y="276" width="22.4" height="90" rx="2"/>
+            <rect class="hw-mark hw-grow" style="--d:13.92s" x="1093.1" y="276" width="22.4" height="90" rx="2"/>
+            </svg>
+            <button class="overlay-toggle" type="button" hidden><span class="toggle-icon" aria-hidden="true"><svg class="icon-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg><svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></span></button>
+          </div>
+        </div>
+        <p class="hw-swipe" aria-hidden="true">옆으로 스크롤하면 그림 전체를 볼 수 있습니다.</p>
+      </div>
+
+      <ol class="steps">
+        <li><strong>답하려면 심전도 분석이 필요한가?</strong> <q>정상 PR 간격은 얼마인가요?</q> 같은 일반적인 질문이나 앞선 답변에서 이미 다룬 후속 질문에는 분석 결과 없이 대화, 첨부한 문서, 의학 지식으로 답합니다. 이 심전도에 관한 그 밖의 질문은 2단계로 넘어갑니다.</li>
+        <li><strong>읽을 결과 고르기.</strong> 분석 프로그램은 세 종류의 결과를 냅니다. 측정값(파형의 시작점, 끝점, 정점과 함께 지속 시간, 간격, 진폭, 전기축을 유도마다, 그리고 유도 전체에 걸쳐 측정), 소견(한 유도의 ST 상승 등), 진단명(1도 방실차단 등)입니다. 심전도가 여러 개인 채팅에서는 에이전트가 먼저 질문과 관련된 심전도를 고릅니다. 그다음 질문에 필요한 결과 종류를 고르고(전체 판독이라면 세 종류 모두), 이어서 필요한 유도와 항목을 고릅니다.</li>
+        <li><strong>표시할 곳 정하기.</strong> 심전도에서 무언가를 보여 달라고 하면, 에이전트는 그 위치를 나타내는 측정된 시작점, 끝점, 정점을 고릅니다. 분석 결과에 그 위치가 없으면 그것을 포함하는 측정된 파형을 대신 표시합니다. 예를 들어 Q파라면 QRS 군을 표시합니다. 포함하는 측정된 파형도 없으면 아무것도 표시하지 않고, 답변에서 그렇다고 알려 줍니다. 요청하지 않았더라도 답변의 근거를 심전도에 표시할 수 있으면, 답변 아래에 <q>근거를 ECG에 표시해 주세요</q> 버튼이 심전도마다 한 번 나타납니다.</li>
+        <li><strong>답변 작성하기.</strong> 답변은 고른 결과의 값, 지금까지의 대화, 채팅에 첨부한 문서, 의학 지식을 바탕으로 작성됩니다. 그다음 데모가 답변 아래의 12유도 심전도에 표시를 그립니다. 사용자의 대답에 따라 판독이나 조치가 달라질 때는 에이전트가 답변 아래에 질문을 하나 하거나, 이전 심전도를 첨부해 달라고 요청할 수도 있습니다. 질문에는 눌러서 고를 수 있는 대답, <q>잘 모르겠어요</q> 버튼, 대답을 써서 보낼 수 있는 <q>직접 입력하기</q>가 함께 나옵니다. 메시지가 여러 뜻으로 읽힐 때는 먼저 어느 뜻인지 물어볼 수도 있습니다.</li>
+      </ol>
+
+      <h3>지원하는 진단</h3>
+      <p>분석 프로그램이 명시적으로 지원하는 진단은 다음과 같습니다.</p>
+      <ul class="plain">
+        <li><strong>리듬:</strong> 심방세동, 심방조동, 심방조기수축, 심실조기수축</li>
+        <li><strong>방실 전도:</strong> 1도, 2도, 3도 방실차단</li>
+        <li><strong>심실 내 전도:</strong> 완전 좌각차단, 완전 우각차단과 불완전 우각차단, 좌전섬유속차단과 좌후섬유속차단</li>
+        <li><strong>비대:</strong> 좌심실비대, 우심실비대</li>
+        <li><strong>경색:</strong> 전벽, 하벽, 측벽 심근경색</li>
+        <li><strong>허혈:</strong> 전벽, 하벽, 측벽 허혈</li>
+      </ul>
+      <p style="margin-top:14px">그 밖의 진단은 에이전트가 측정된 심전도 특징을 바탕으로 추론하므로 답이 덜 정확할 수 있다는 점을 염두에 두세요.</p>
+
+      <h3>답변을 볼 때 알아 둘 점</h3>
+      <p>답변은 측정값보다 정확할 수 없습니다. 잡음이 많거나 특이한 기록에서는 파형의 시작점이나 끝점이 잘못 잡혀 답이 틀릴 수 있습니다. 에이전트가 근거를 보여 줄 수 있는 것도 이 때문입니다. 근거를 요청하면 측정된 위치에 정확히 표시하므로, 심전도와 대조해 확인할 수 있습니다.</p>
+    </section>
+
+    <section id="before" class="panel" aria-labelledby="before-title">
+      <h2 id="before-title" tabindex="-1">사용 전 안내</h2>
+      <div class="notice">
+        <ul>
+          <li>연구용 데모입니다. 의료기기가 아니므로 환자의 진단이나 치료에 사용해서는 안 됩니다. 답이 틀릴 수 있습니다.</li>
+          <li>분석 프로그램이 명시적으로 지원하는 진단(<a href="#how">작동 방식</a> 참고) 외에는 에이전트가 측정된 심전도 특징을 바탕으로 추론하므로 답이 덜 정확할 수 있습니다.</li>
+          <li>환자를 식별할 수 있는 정보는 업로드하거나 첨부하거나 입력하지 마시고, 소속 기관 밖으로 공유해도 되는 기록만 업로드하세요. WFDB 헤더의 주석 줄에 환자 정보가 들어 있을 수 있으니 업로드하기 전에 확인하세요.</li>
+        </ul>
+      </div>
+
+      <h3>데모 열기</h3>
+      <ul class="plain">
+        <li>가입은 필요 없습니다. 처음 방문하면 데모를 제공하는 서비스인 ngrok의 안내 페이지가 확인을 요청합니다. 이 방식으로 제공되는 모든 사이트에 나타나는 페이지이며, 문제가 있다는 뜻은 아닙니다. <strong>Visit Site</strong>를 눌러 계속하세요.</li>
+        <li>병원 네트워크에서 데모가 열리지 않으면 다른 네트워크에서 시도해 보세요.</li>
+        <li>12유도 심전도는 큰 화면에서 보기 편하고, 기록을 업로드하기도 컴퓨터에서 더 쉽습니다.</li>
+        <li>데모는 영어와 한국어로 제공됩니다. 브라우저의 첫 번째 언어가 한국어이면 한국어로 시작하며, 설정의 일반 항목에서 언어를 바꿀 수 있습니다.</li>
+        <li>메시지 입력창 옆에 스위치가 두 개 있습니다. <strong>후속 질문</strong>을 켜 두면 에이전트가 답변 아래에 질문을 하거나, 몇 가지 중 어느 것을 뜻하는지 물어볼 수 있습니다. 기본으로 켜져 있으며, 답만 받고 싶다면 끌 수 있습니다. <strong>깊게 생각</strong>을 켜면 에이전트가 답변마다 시간을 더 들입니다. 기본으로 꺼져 있습니다.</li>
+      </ul>
+
+      <h3>첨부할 수 있는 것</h3>
+      <ul class="plain">
+        <li>두 공개 연구 데이터셋인 PTB-XL과 MIMIC-IV-ECG의 샘플 심전도 6,188개 중 하나. 진단명 없이 ID로만 나열되어 있습니다. ID 위에 마우스 포인터를 올리거나 ID를 탭하면, 첨부하기 전에 심전도를 미리 볼 수 있습니다.</li>
+        <li>갖고 있는 12유도 기록(WFDB 형식의 <code>.hea</code> 헤더 파일과 <code>.dat</code> 신호 파일). 첨부할 때 샘플링 주파수와 유도 순서를 확인합니다.</li>
+        <li>한 채팅에는 심전도를 메시지 하나에 하나씩, 최대 네 개까지 첨부할 수 있습니다. 그중 하나에 관해 묻거나, 오늘 기록과 지난주 기록처럼 서로 비교할 수 있습니다. 임시 채팅에는 심전도를 하나만 첨부할 수 있습니다.</li>
+        <li>사진, PDF, 스캔한 종이 심전도, 심전도 기기에서 다른 형식(XML 등)으로 내보낸 파일, 단일 유도 기록은 심전도로 읽을 수 없습니다.</li>
+        <li>환자에게 심박조율기가 있다는 것을 안다면, 심전도를 첨부할 때 심박조율기 감지를 켜세요. 심실 조율 스파이크만 찾으며 틀릴 수 있어서 기본으로 꺼져 있습니다. 스파이크를 찾으면 그 기록에서는 각차단, 심실비대, 심근경색, 허혈처럼 조율 박동으로는 판단할 수 없는 진단을 평가하지 않습니다.</li>
+        <li>PDF 같은 문서를 질문에 첨부할 수 있습니다. 이후 같은 채팅에서는 질문마다 문서에서 그 질문과 관련된 부분을 답변의 참고 자료로 씁니다.</li>
+      </ul>
+
+      <h3>메시지가 전달되는 곳</h3>
+      <ul class="plain">
+        <li>답변을 작성하기 위해 데모는 질문, 채팅의 이전 메시지, 첨부한 문서의 텍스트, 분석 결과를 외부 언어 모델 서비스로 보냅니다. 심전도 신호와 그 이미지, 표시를 그린 심전도는 보내지 않습니다.</li>
+        <li>답변을 평가하면 그 채팅의 사본이 평가와 함께 보관됩니다.</li>
+      </ul>
+
+      <h3>세션과 이용 한도</h3>
+      <ul class="plain">
+        <li>계정은 없습니다. 브라우저마다 별도의 게스트 세션이 주어집니다. 보통 브라우저를 닫으면 세션이 끝나고, 로그아웃하면 새 세션이 시작되며, 끝난 세션의 채팅은 다시 열 수 없습니다. 하루 동안 쓰지 않은 세션은 채팅과 함께 삭제됩니다.</li>
+        <li>하루 이용량에 한도가 있습니다. 한도는 매일 00:00 UTC(한국 시각 09:00)에 초기화됩니다.</li>
+        <li>업데이트 중일 때처럼 데모를 이용할 수 없는 때가 있습니다. 열리지 않거나 답하지 않으면 몇 분 뒤에 다시 시도해 주세요.</li>
+      </ul>
+    </section>
+
+    <section id="contact" class="panel" aria-labelledby="contact-title">
+      <h2 id="contact-title" tabindex="-1">문의</h2>
+      <p>질문과 의견을 환영합니다.</p>
+      <dl class="contact prose">
+        <dt>이메일</dt>
+        <dd>ojw0123 (at) kaist.ac.kr</dd>
+        <dt>답변 하나에 대한 의견</dt>
+        <dd>데모에서 답변 아래의 엄지 모양 버튼(<q>좋은 응답</q> 또는 <q>잘못된 응답</q>)으로 평가하고, 이유를 고른 뒤 원하면 의견도 남겨 주세요.</dd>
+        <dt>대화 전체에 대한 의견</dt>
+        <dd>채팅 메뉴의 <q>다운로드</q>에서 텍스트나 PDF로 내려받아 이메일에 첨부해 주세요.</dd>
+        <dt>홈페이지</dt>
+        <dd><a href="https://jwoo5.github.io/">jwoo5.github.io</a></dd>
+      </dl>
+    </section>
+
+    <footer>
+      <p>샘플 심전도는 <a href="https://physionet.org/content/ptb-xl/1.0.3/">PTB-XL</a>(<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>)과 <a href="https://physionet.org/content/mimic-iv-ecg/1.0/">MIMIC-IV-ECG</a>(<a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a>)에서 가져왔으며, 두 데이터셋 모두 PhysioNet에 공개되어 있습니다. 이 샘플들은 <a href="https://arxiv.org/abs/2603.14326">ECG-Reasoning-Benchmark</a>에 쓰인 심전도입니다.</p>
+    </footer>
+  </main>
+
+  <script>
+    document.documentElement.classList.add('js');
+    (function () {
+      var SECTIONS = ['home', 'how', 'before', 'contact'];
+      // Anchors of the earlier single-page layout open the section that now holds them.
+      var ALIASES = { what: 'home', try: 'home', data: 'home' };
+      var nav = document.querySelector('.tabs');
+      var tabs = Array.prototype.slice.call(nav.querySelectorAll('[data-tab]'));
+      var onShow = [];
+
+      function sectionFor(hash) {
+        var id = (hash || '').replace(/^#/, '');
+        try {
+          id = decodeURIComponent(id);
+        } catch (error) {
+          return 'home';
+        }
+        if (SECTIONS.indexOf(id) !== -1) return id;
+        return ALIASES[id] || 'home';
+      }
+
+      function heading(id) { return document.getElementById(id).querySelector('h2'); }
+
+      function show(id) {
+        SECTIONS.forEach(function (name) {
+          document.getElementById(name).hidden = name !== id;
+        });
+        tabs.forEach(function (tab) {
+          if (tab.getAttribute('data-tab') === id) tab.setAttribute('aria-current', 'page');
+          else tab.removeAttribute('aria-current');
+        });
+        onShow.forEach(function (listener) { listener(id); });
+      }
+
+      // Focus moves to the shown section's heading, and the buttons are
+      // scrolled back into view when they, or that heading, are off screen.
+      function focusSection(id) {
+        var title = heading(id);
+        title.focus({ preventScroll: true });
+        if (nav.getBoundingClientRect().top < 0 || title.getBoundingClientRect().bottom > window.innerHeight) {
+          nav.scrollIntoView();
+        }
+      }
+
+      // A link to a section shows it in place of the current one. Home is kept
+      // without a fragment, so reloading it starts at the top of the page.
+      document.addEventListener('click', function (event) {
+        var link = event.target.closest('a[href^="#"]');
+        if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        var id = link.getAttribute('href').slice(1);
+        if (SECTIONS.indexOf(id) === -1) return;
+        event.preventDefault();
+        var url = id === 'home' ? location.pathname + location.search : '#' + id;
+        if (sectionFor(location.hash) !== id) history.pushState(null, '', url);
+        show(id);
+        focusSection(id);
+      });
+      // Back and forward show the section the address names; focus that was
+      // inside the section being hidden moves to the new section's heading.
+      window.addEventListener('popstate', function () {
+        var id = sectionFor(location.hash);
+        var active = document.activeElement;
+        var lost = SECTIONS.some(function (name) {
+          return name !== id && document.getElementById(name).contains(active);
+        });
+        show(id);
+        if (lost) heading(id).focus({ preventScroll: true });
+      });
+
+      var player = document.querySelector('[data-player]');
+      if (player) setUpPlayer(player);
+      var figure = document.querySelector('.hw');
+      if (figure) setUpFigure(figure);
+      show(sectionFor(location.hash));
+
+      // The figure walks through its example question, rests on the finished
+      // figure and starts again, while How it works is shown and the page is
+      // in view. Clicking the figure pauses it on the finished figure, and
+      // clicking again starts it over. Readers who asked for reduced motion
+      // get the finished figure only, since the CSS animates nothing for them.
+      function setUpFigure(root) {
+        // One run of the CSS animations takes about 14.5 s; the rest of the
+        // cycle is the pause before the next run.
+        var CYCLE = 22000;
+        var toggle = root.querySelector('.overlay-toggle');
+        var scroller = root.querySelector('.hw-scroll');
+        var motion = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var wanted = motion;
+        var onHow = false;
+        var timer = 0;
+
+        // The scroller takes keyboard focus only when there is something to scroll to.
+        function syncScroller() {
+          scroller.tabIndex = scroller.scrollWidth > scroller.clientWidth ? 0 : -1;
+        }
+        // Removing and re-adding the class restarts the animations.
+        function restart() {
+          root.classList.remove('play');
+          void root.getBoundingClientRect();
+          root.classList.add('play');
+        }
+        function stop() {
+          clearInterval(timer);
+          timer = 0;
+          root.classList.remove('play');
+        }
+        function label() {
+          toggle.setAttribute('data-state', wanted ? 'playing' : 'paused');
+          toggle.setAttribute('aria-label', wanted ? '그림 애니메이션 일시 정지' : '그림 애니메이션 재생');
+        }
+        function update() {
+          var running = wanted && onHow && document.visibilityState === 'visible';
+          if (running && !timer) {
+            restart();
+            timer = setInterval(restart, CYCLE);
+          } else if (!running && timer) {
+            stop();
+          }
+          label();
+        }
+
+        if (motion) {
+          toggle.hidden = false;
+          toggle.addEventListener('click', function () {
+            wanted = !wanted;
+            update();
+          });
+          document.addEventListener('visibilitychange', update);
+        }
+        window.addEventListener('resize', function () {
+          if (onHow) syncScroller();
+        });
+        onShow.push(function (id) {
+          onHow = id === 'how';
+          if (onHow) syncScroller();
+          // Showing the section again starts the figure from the beginning.
+          if (timer) stop();
+          update();
+        });
+      }
+
+      // The clips play one after another while Home is shown and the page is
+      // in view. A clip without a video shows the placeholder for as long as
+      // its description takes to read. Clicking the screen pauses and plays.
+      // Choosing a clip plays the sequence on from that clip.
+      function setUpPlayer(root) {
+        var clips = Array.prototype.slice.call(root.querySelectorAll('.clip'));
+        var video = root.querySelector('video');
+        var placeholder = root.querySelector('.placeholder');
+        var placeholderTitle = root.querySelector('.placeholder-title');
+        var detail = root.querySelector('.clip-detail');
+        var toggle = root.querySelector('.overlay-toggle');
+        toggle.hidden = false;
+        var texts = clips.map(function (clip) {
+          var text = clip.parentNode.querySelector('.clip-text');
+          detail.appendChild(text);
+          clip.disabled = false;
+          return text;
+        });
+        var index = 0;
+        var wanted = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var onHome = true;
+        var elapsed = 0;
+        var frame = 0;
+        var last = 0;
+
+        function current() { return clips[index]; }
+        function bar(clip) { return clip.querySelector('.clip-bar span'); }
+        function setProgress(fraction) { bar(current()).style.transform = 'scaleX(' + fraction + ')'; }
+        function running() { return wanted && onHome && document.visibilityState === 'visible'; }
+        function readingTime() {
+          var words = texts[index].textContent.trim().split(/\s+/).length;
+          return Math.max(7000, words * 320);
+        }
+
+        function stopTimer() {
+          if (frame) cancelAnimationFrame(frame);
+          frame = 0;
+        }
+        function startTimer() {
+          if (frame) return;
+          last = performance.now();
+          frame = requestAnimationFrame(tick);
+        }
+        function tick(now) {
+          var duration = readingTime();
+          elapsed += now - last;
+          last = now;
+          setProgress(Math.min(elapsed / duration, 1));
+          if (elapsed >= duration) {
+            frame = 0;
+            select(index + 1);
+            return;
+          }
+          frame = requestAnimationFrame(tick);
+        }
+
+        function label() {
+          toggle.setAttribute('data-state', wanted ? 'playing' : 'paused');
+          toggle.setAttribute('aria-label', wanted ? '영상 일시 정지' : '영상 재생');
+        }
+
+        function update() {
+          var src = current().getAttribute('data-src');
+          if (running()) {
+            if (src) {
+              var playing = video.play();
+              if (playing) {
+                playing.catch(function (error) {
+                  // A play cut short by a pause or a new clip is not a failure.
+                  if (error && error.name === 'AbortError') return;
+                  if (error && error.name === 'NotAllowedError') {
+                    wanted = false;
+                    label();
+                  } else {
+                    skipBroken();
+                  }
+                });
+              }
+            } else {
+              startTimer();
+            }
+          } else if (src) {
+            video.pause();
+          } else {
+            stopTimer();
+          }
+          label();
+        }
+
+        // A clip whose video cannot be played shows the placeholder instead.
+        function skipBroken() {
+          current().setAttribute('data-src', '');
+          select(index);
+        }
+
+        function select(next) {
+          stopTimer();
+          video.pause();
+          index = (next + clips.length) % clips.length;
+          elapsed = 0;
+          clips.forEach(function (clip, position) {
+            if (position === index) clip.setAttribute('aria-current', 'true');
+            else clip.removeAttribute('aria-current');
+            bar(clip).style.transform = 'scaleX(0)';
+          });
+          texts.forEach(function (text, position) {
+            text.classList.toggle('active', position === index);
+          });
+          var clip = current();
+          var src = clip.getAttribute('data-src');
+          if (src) {
+            placeholder.hidden = true;
+            video.hidden = false;
+            if (video.getAttribute('src') !== src) {
+              video.poster = clip.getAttribute('data-poster') || '';
+              video.src = src;
+            } else {
+              video.currentTime = 0;
+            }
+          } else {
+            video.hidden = true;
+            if (video.hasAttribute('src')) {
+              video.removeAttribute('src');
+              video.load();
+            }
+            placeholder.hidden = false;
+            placeholderTitle.textContent = clip.querySelector('.clip-title').textContent;
+          }
+          update();
+        }
+
+        video.addEventListener('timeupdate', function () {
+          if (video.duration) setProgress(video.currentTime / video.duration);
+        });
+        video.addEventListener('ended', function () {
+          select(index + 1);
+        });
+        video.addEventListener('error', function () {
+          if (video.hasAttribute('src')) skipBroken();
+        });
+        clips.forEach(function (clip, position) {
+          clip.addEventListener('click', function () {
+            wanted = true;
+            select(position);
+          });
+        });
+        toggle.addEventListener('click', function () {
+          wanted = !wanted;
+          update();
+        });
+        document.addEventListener('visibilitychange', update);
+        onShow.push(function (id) {
+          onHome = id === 'home';
+          update();
+        });
+        select(0);
+      }
+    })();
+  </script>
+</body>
+</html>
